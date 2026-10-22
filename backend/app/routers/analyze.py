@@ -248,7 +248,10 @@ async def analyze(
         # measured OpenCV features below, and storage advice still comes from
         # the curated knowledge base -- so a wrong name costs a wrong label the
         # user can correct, never a fabricated freshness figure.
-        if not identified:
+        # Skipped when the detector found anything: one food is already
+        # identified above, and several go to the shortlist below either way,
+        # so asking here only added ~16s to the scan and discarded the answer.
+        if not identified and not detected_foods:
             seen = await identify_with_vision(
                 data, mime_type=image.content_type or "image/jpeg"
             )

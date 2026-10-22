@@ -274,11 +274,21 @@ def test_several_detected_foods_become_a_shortlist_not_a_guess(
 
     monkeypatch.setattr(analyze_module, "get_detector", lambda: FakeDetector())
 
+    # The detector already answered; a vision call here only cost ~16s.
+    vision_calls: list[bytes] = []
+
+    async def fake_vision(data, **_):
+        vision_calls.append(data)
+        return None
+
+    monkeypatch.setattr(analyze_module, "identify_with_vision", fake_vision)
+
     body = client.post(f"{PREFIX}/analyze", files=_upload(_jpeg())).json()
 
     assert body["identified"] is False
     assert body["score"] == 0
     assert [a["food_name"] for a in body["alternatives"]] == ["Banana", "Apple"]
+    assert vision_calls == []
     assert "several foods" in body["note"].lower()
 
 

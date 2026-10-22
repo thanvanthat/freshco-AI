@@ -129,3 +129,19 @@ async def test_several_foods_are_flagged_not_named(provider):
     )
     seen = await identify.identify_food(b"x")
     assert seen is not None and seen.multiple is True
+
+
+@pytest.mark.asyncio
+async def test_a_slow_model_is_abandoned_not_waited_on(provider, monkeypatch):
+    """A scan must not sit behind a vision call that has stopped answering."""
+    import asyncio
+
+    class _Slow(_Vision):
+        async def complete_vision(self, *args, **kwargs):
+            await asyncio.sleep(5)
+            return "{}"
+
+    slow = _Slow("")
+    monkeypatch.setattr(identify, "get_provider", lambda _s, **_kw: slow)
+    monkeypatch.setattr(identify, "TIMEOUT_SECONDS", 0.05)
+    assert await identify.identify_food(b"x") is None

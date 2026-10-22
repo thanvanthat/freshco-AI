@@ -29,6 +29,7 @@ confident. Every caller falls back to asking the user to name the food.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from ..config import get_settings
@@ -102,10 +103,18 @@ async def identify_food(image: bytes, *, mime_type: str = "image/jpeg"):
         return None
 
     try:
-        raw = await provider.complete_vision(
-            _SYSTEM, _PROMPT, image, mime_type=mime_type, max_tokens=200
+        # The cap covers the provider's own 503 retries too: a scan gives up on
+        # the vision model rather than leave someone watching a spinner.
+        raw = await asyncio.wait_for(
+            provider.complete_vision(
+                _SYSTEM, _PROMPT, image, mime_type=mime_type, max_tokens=200
+            ),
+            timeout=TIMEOUT_SECONDS,
         )
         parsed = _extract_json_object(raw)
+    except TimeoutError:
+        logger.info("Vision identification timed out after %.0fs", TIMEOUT_SECONDS)
+        return None
     except AIProviderError as exc:
         # A scan must never fail because the vision model was unreachable or
         # out of quota. The classifier's answer, or the food picker, stands.
