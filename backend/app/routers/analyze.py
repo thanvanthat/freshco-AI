@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from ..ai.identify import identify_food as identify_with_vision
 from ..config import get_settings
-from ..freshness import HIGH_RISK_CATEGORIES, assess, estimate_window
+from ..freshness import assess, estimate_window, is_high_risk
 from ..knowledge.food_data import browning_applicable
 from ..knowledge.service import knowledge
 from ..narrative import action_for, build_narrative
@@ -413,7 +413,7 @@ async def analyze(
         visual_narrative=VisualNarrative(**narrative),
         storage_recommendation=recommendation,
         recommended_action=action_for(
-            assessment.status, category in HIGH_RISK_CATEGORIES
+            assessment.status, is_high_risk(category, record)
         ),
         reasoning=assessment.reasoning,
         alternatives=alternatives,
@@ -511,7 +511,7 @@ async def detect_foods(image: UploadFile = File(...)) -> DetectResponse:
                 ),
                 visual_metrics=VisualMetrics(**metrics.as_dict()),
                 recommended_action=action_for(
-                    assessment.status, record.category in HIGH_RISK_CATEGORIES
+                    assessment.status, is_high_risk(record.category, record)
                 ),
             )
         )

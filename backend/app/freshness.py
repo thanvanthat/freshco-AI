@@ -125,13 +125,33 @@ WEIGHTS: dict[str, dict[str, float]] = {
 
 #: Foods whose family is 'leafy' regardless of their category.
 LEAFY_FOODS: frozenset[str] = frozenset(
-    {"spinach", "cabbage", "broccoli", "cauliflower", "lettuce", "kale", "coriander"}
+    {
+        "spinach",
+        "cabbage",
+        "broccoli",
+        "cauliflower",
+        "lettuce",
+        "kale",
+        "coriander",
+        "curry leaves",
+        "fenugreek leaves",
+    }
 )
 
 #: Categories where a photo cannot establish freshness.
 HIGH_RISK_CATEGORIES: frozenset[str] = frozenset(
     {"meat", "poultry", "seafood", "dairy"}
 )
+
+def is_high_risk(category: str, record: FoodRecord | None) -> bool:
+    """Whether a photograph cannot establish this food's freshness.
+
+    The category covers raw protein and dairy. The record flag covers the rest
+    -- cooked rice and idli carry Bacillus cereus risk that no photo shows --
+    and was previously ignored here, so those could score 95/100 "fresh".
+    """
+    return category in HIGH_RISK_CATEGORIES or (record is not None and record.high_risk)
+
 
 #: Highest score a high-risk food may receive from visual analysis alone.
 HIGH_RISK_SCORE_CAP = 72
@@ -240,7 +260,7 @@ def assess(
     score = int(round(100 * (1.0 - penalty)))
 
     capped = False
-    if category in HIGH_RISK_CATEGORIES and score > HIGH_RISK_SCORE_CAP:
+    if is_high_risk(category, record) and score > HIGH_RISK_SCORE_CAP:
         score = HIGH_RISK_SCORE_CAP
         capped = True
 
@@ -250,7 +270,14 @@ def assess(
         score=score,
         status=status,
         contributions=contributions,
-        reasoning=_build_reasoning(metrics, contributions, capped, category),
+        reasoning=_build_reasoning(
+            metrics,
+            contributions,
+            capped,
+            f"{category} items"
+            if category in HIGH_RISK_CATEGORIES or record is None
+            else record.name.lower(),
+        ),
         capped=capped,
     )
 
@@ -259,7 +286,7 @@ def _build_reasoning(
     metrics: SurfaceMetrics,
     contributions: dict[str, float],
     capped: bool,
-    category: str,
+    subject: str,
 ) -> list[str]:
     """Plain-language explanation, ordered by how much each signal cost."""
     reasons: list[str] = []
@@ -295,9 +322,9 @@ def _build_reasoning(
 
     if capped:
         reasons.append(
-            f"Because this is a {category} item, the score is capped at "
-            f"{HIGH_RISK_SCORE_CAP}: a photograph cannot establish freshness for "
-            f"this category. Check smell, texture and the printed date."
+            f"The score is capped at {HIGH_RISK_SCORE_CAP}: a photograph cannot "
+            f"establish freshness for {subject}. Check smell, texture and the "
+            f"printed date."
         )
 
     reasons.extend(metrics.notes)
