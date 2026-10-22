@@ -46,7 +46,7 @@ export default function PrivacyScreen() {
           <Body style={styles.paragraph}>
             <Body style={styles.term}>Photos. </Body>
             When you scan food, the image is compressed on your device and sent
-            to the Fresora analysis server so it can be measured. The server
+            to the FreshCO AI analysis server so it can be measured. The server
             analyses it in memory and does not store it. The copy kept for your
             inventory and history stays in this app&apos;s private storage on
             your device.

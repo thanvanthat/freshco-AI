@@ -1,5 +1,5 @@
 /**
- * Core Fresora domain types.
+ * Core FreshCO AI domain types.
  *
  * These mirror the FastAPI Pydantic schemas in backend/app/schemas.py. Keep the
  * two in sync -- the backend is the source of truth for anything the model or

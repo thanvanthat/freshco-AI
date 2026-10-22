@@ -354,7 +354,7 @@ describe('computeAnalytics', () => {
   });
 
   it('reports no money or carbon estimate', () => {
-    // These keys must not exist: Fresora has no price or emissions data.
+    // These keys must not exist: FreshCO AI has no price or emissions data.
     const result = computeAnalytics(items, scans, 0, 30, NOW) as unknown as Record<string, unknown>;
     expect(result.money_saved).toBeUndefined();
     expect(result.carbon_saved).toBeUndefined();

@@ -9,7 +9,7 @@ import type { InventoryView } from '../utils/inventory';
 /**
  * Local notifications: freshness reminders and rescue prompts.
  *
- * Local only -- Fresora has no server pushing to devices, and local scheduling
+ * Local only -- FreshCO AI has no server pushing to devices, and local scheduling
  * is all this feature needs.
  *
  * WHY expo-notifications IS LOADED LAZILY

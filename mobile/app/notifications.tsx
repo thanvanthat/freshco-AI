@@ -18,7 +18,7 @@ import { GUTTER, colors, radius, spacing, statusColors } from '../src/theme';
  * Notification inbox.
  *
  * These are the app's own records of reminders, kept separately from the OS
- * notification tray so the user can see what Fresora has flagged even if
+ * notification tray so the user can see what FreshCO AI has flagged even if
  * they dismissed the system banner.
  */
 export default function NotificationsScreen() {

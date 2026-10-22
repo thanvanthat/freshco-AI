@@ -16,6 +16,7 @@
  * usable URL at render time.
  */
 
+// Former app name, kept on purpose: renaming it orphans every stored photo.
 const DB_NAME = 'fresora-images';
 const STORE = 'images';
 

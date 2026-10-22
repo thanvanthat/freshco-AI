@@ -220,7 +220,7 @@ export default function AddFoodScreen() {
           autoCapitalize="none"
         />
         <Caption style={styles.dateHint}>
-          A printed date always takes priority over Fresora&apos;s estimate.
+          A printed date always takes priority over FreshCO AI&apos;s estimate.
         </Caption>
 
         <Field

@@ -226,7 +226,7 @@ interface MetricRowProps {
  * One measured metric.
  *
  * When `value` is null the bar is replaced with an explicit "not measured"
- * note -- Fresora never renders a zero bar for a metric it did not compute.
+ * note -- FreshCO AI never renders a zero bar for a metric it did not compute.
  */
 export function MetricRow({
   label,

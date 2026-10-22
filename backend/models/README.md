@@ -1,6 +1,6 @@
 # Models
 
-Every model Fresora runs, what it is for, and what it cannot do. All inference
+Every model FreshCO AI runs, what it is for, and what it cannot do. All inference
 is ONNX Runtime on CPU — there is no TensorFlow or PyTorch at runtime, which is
 what keeps the whole backend inside the 250 MB limit for a serverless function.
 
@@ -18,7 +18,7 @@ what keeps the whole backend inside the 250 MB limit for a serverless function.
 
 **What it does.** Takes the whole photo and answers "what food is this?".
 Outputs 1000 ImageNet class scores; `IMAGENET_FOOD_MAP` in
-`app/vision/classifier.py` narrows those to foods Fresora holds data for.
+`app/vision/classifier.py` narrows those to foods FreshCO AI holds data for.
 
 **Source.** ONNX Model Zoo, `mobilenetv2-12`. ImageNet-1k pretrained weights.
 
@@ -170,7 +170,7 @@ swapped out because YOLOX is 9 MB smaller and found 12 items where SSD found
 The protein hint was trained on Wikimedia Commons photos, which carry a mix of
 free licences (CC-BY, CC-BY-SA, public domain). Whether a trained weight is a
 derivative work of its training images is unsettled, and the answer may differ
-by jurisdiction. If Fresora is ever distributed commercially, retrain the head
+by jurisdiction. If FreshCO AI is ever distributed commercially, retrain the head
 on photos you own — which is worth doing anyway, since your own kitchen photos
 will outperform studio shots from Commons.
 

@@ -1,10 +1,10 @@
-# Fresora
+# FreshCO AI
 
 **AI-assisted food freshness and zero-waste assistant.** Scan food, get a
 measured assessment of its visible condition, and use it before it becomes
 waste.
 
-> Fresora analyzes visible food characteristics from images. It cannot detect
+> FreshCO AI analyzes visible food characteristics from images. It cannot detect
 > microscopic bacteria, odorless toxins, or all internal food-safety hazards.
 > Results are AI-assisted estimates, not official food-safety guarantees.
 
@@ -97,7 +97,7 @@ browser, so judge the app on a phone.
 ## Architecture
 
 ```
-Fresora/
+FreshCO AI/
 ├── mobile/                  Expo + TypeScript app (React Native 0.86, SDK 57)
 │   ├── app/                 expo-router routes (27 screens, file-based)
 │   │   ├── (tabs)/          Home · My Food · Scan · Recipes · You
@@ -252,7 +252,7 @@ returns `null` and the other four signals carry the assessment.
 
 ## Optional components, and what happens without them
 
-Fresora is designed to run with **zero credentials** and degrade honestly.
+FreshCO AI is designed to run with **zero credentials** and degrade honestly.
 `GET /api/v1/health` reports exactly what is live, and the You tab shows it.
 
 ### The models, at a glance
@@ -260,7 +260,7 @@ Fresora is designed to run with **zero credentials** and degrade honestly.
 Full detail, including measured accuracy and licensing, in
 [`backend/models/README.md`](backend/models/README.md).
 
-| Model | Purpose | In Fresora |
+| Model | Purpose | In FreshCO AI |
 |---|---|---|
 | **MobileNetV2** | Classifies an image | Names the food on every scan |
 | **MobileNetV2 + custom classifier** | Classifies your own categories | Raw-protein hint; `scripts/train_food_head.py` trains more |

@@ -10,7 +10,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://fresora-api-production.up.railway.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://fresora-api.vercel.app"
       }
     },
     "production": {
@@ -18,7 +18,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://fresora-api-production.up.railway.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://fresora-api.vercel.app"
       }
     }
   },

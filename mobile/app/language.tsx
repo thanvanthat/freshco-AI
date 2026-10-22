@@ -62,7 +62,7 @@ export default function LanguageScreen() {
         </Card>
 
         <Body style={styles.note}>
-          Fresora falls back to English for anything not yet translated, so the
+          FreshCO AI falls back to English for anything not yet translated, so the
           interface is always complete.
         </Body>
 

@@ -59,7 +59,7 @@ export function t(key: TranslationKey | string, params?: Record<string, string |
 }
 
 /**
- * Pluralisation. Fresora only ever needs one/other, so we take the two keys
+ * Pluralisation. FreshCO AI only ever needs one/other, so we take the two keys
  * explicitly rather than pulling in a full CLDR plural-rules dependency.
  */
 export function tPlural(

@@ -34,7 +34,7 @@ export function daysUntil(iso: string, now: Date = new Date()): number {
  * this the inventory would quietly keep claiming 4 days forever.
  *
  * A user-entered best-before date wins when it is sooner: printed dates carry
- * information a photo cannot, so Fresora defers to them rather than
+ * information a photo cannot, so FreshCO AI defers to them rather than
  * overriding them (rule 31).
  */
 export function remainingDays(item: InventoryItem, now: Date = new Date()): number | null {

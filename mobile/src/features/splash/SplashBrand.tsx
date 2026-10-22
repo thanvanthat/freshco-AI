@@ -7,7 +7,7 @@ import { useTranslation } from '../../i18n';
 import { colors, spacing } from '../../theme';
 
 /**
- * The Fresora leaf mark, drawn as SVG.
+ * The FreshCO AI leaf mark, drawn as SVG.
  *
  * Inline rather than a PNG so it scales cleanly and picks up theme colours.
  * Two shapes: the leaf body and the midrib.

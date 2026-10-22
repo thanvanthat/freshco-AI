@@ -14,7 +14,7 @@ import { DEFAULT_PREFERENCES, type FoodStore } from './types';
 /**
  * On-device store, backed by AsyncStorage.
  *
- * This is the default, so Fresora is fully usable with zero credentials. Each
+ * This is the default, so FreshCO AI is fully usable with zero credentials. Each
  * collection is one JSON blob under its own key -- at household inventory sizes
  * (tens to low hundreds of rows) reading and rewriting a whole collection is
  * far simpler than maintaining an index, and stays well inside AsyncStorage's
@@ -25,6 +25,8 @@ import { DEFAULT_PREFERENCES, type FoodStore } from './types';
  * this same FoodStore interface.
  */
 
+// Keys keep the app's former name on purpose: renaming them would orphan every
+// inventory, scan and preference already saved on a user's device.
 const KEYS = {
   inventory: 'fresora.inventory.v1',
   scans: 'fresora.scans.v1',

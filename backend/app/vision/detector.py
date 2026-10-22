@@ -10,7 +10,7 @@ average into one number.
 
 WHAT IT DETECTS
 ---------------
-YOLOX-Tiny trained on COCO. Of COCO's 80 classes, five are foods Fresora
+YOLOX-Tiny trained on COCO. Of COCO's 80 classes, five are foods FreshCO AI
 already holds reference data for: banana, apple, orange, broccoli and carrot.
 Four more are foods it does not (sandwich, pizza, hot dog, donut, cake), and
 those are reported as detected-but-unknown rather than dropped, so the user can
@@ -48,7 +48,7 @@ STRIDES = (8, 16, 32)
 #: shifts the statistics the network sees at the edges.
 PAD_VALUE = 114
 
-#: COCO class index -> the Fresora food it corresponds to.
+#: COCO class index -> the FreshCO AI food it corresponds to.
 #:
 #: These are 0-based indices into COCO's 80 classes, which is what YOLOX emits.
 #: SSD used the 90-class map where banana is 52; here it is 46. Carrying the
@@ -62,7 +62,7 @@ COCO_TO_FOOD: dict[int, str] = {
     51: "Carrot",
 }
 
-#: COCO foods with no Fresora reference data. Reported so the user can name
+#: COCO foods with no FreshCO AI reference data. Reported so the user can name
 #: them; never silently dropped, because "we found nothing" would be wrong.
 COCO_OTHER_FOOD: dict[int, str] = {
     48: "sandwich",
@@ -107,7 +107,7 @@ class Detection:
 
     @property
     def known(self) -> bool:
-        """Whether Fresora holds reference data for this food."""
+        """Whether FreshCO AI holds reference data for this food."""
         return self.food_name is not None
 
     def crop(self, image_bgr: np.ndarray, *, pad: float = 0.04) -> np.ndarray:

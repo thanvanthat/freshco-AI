@@ -24,7 +24,7 @@ import { colors, spacing, statusColors } from '../src/theme';
  *
  * Every figure is computed from the user's own rows and the methodology is
  * stated on the screen. There is no money-saved or carbon-saved number, because
- * Fresora has no price or emissions data and inventing one would be the most
+ * FreshCO AI has no price or emissions data and inventing one would be the most
  * tempting dishonesty in the whole app (rule 28).
  */
 export default function AnalyticsScreen() {

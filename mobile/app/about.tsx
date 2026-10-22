@@ -137,7 +137,7 @@ export default function AboutScreen() {
             </Body>
             <Body style={styles.limit}>
               • A printed best-before date always takes priority over anything
-              Fresora estimates.
+              FreshCO AI estimates.
             </Body>
           </View>
         </Card>

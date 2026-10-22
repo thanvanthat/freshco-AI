@@ -5,7 +5,7 @@
  */
 const en = {
   common: {
-    appName: 'Fresora',
+    appName: 'FreshCO AI',
     tagline: 'Know your food. Waste less.',
     positioning: 'AI-Powered Food Freshness & Zero-Waste Assistant',
     cancel: 'Cancel',
@@ -68,12 +68,12 @@ const en = {
   },
   safety: {
     fullNotice:
-      'Fresora analyzes visible food characteristics from images. It cannot detect microscopic bacteria, odorless toxins, or all internal food-safety hazards. Results are AI-assisted estimates, not official food-safety guarantees.',
+      'FreshCO AI analyzes visible food characteristics from images. It cannot detect microscopic bacteria, odorless toxins, or all internal food-safety hazards. Results are AI-assisted estimates, not official food-safety guarantees.',
     shortNotice: 'AI-assisted visual assessment — not a food-safety guarantee.',
     spoiledGuidance:
       'Visible spoilage indicators detected. Do not consume. Follow appropriate disposal guidance.',
     recipeCaution:
-      'Inspect each ingredient before cooking. Fresora cannot verify food safety from an image alone.',
+      'Inspect each ingredient before cooking. FreshCO AI cannot verify food safety from an image alone.',
     lowConfidence:
       'Model confidence is low for this image. Try better lighting or a closer shot, or set the food name manually.',
     disclaimerTitle: 'Food safety disclaimer',
@@ -109,7 +109,7 @@ const en = {
     sendResetLink: 'Send Reset Link',
     sendingReset: 'Sending…',
     backToSignIn: 'Back to Sign In',
-    noAccount: 'New to Fresora?',
+    noAccount: 'New to FreshCO AI?',
     hasAccount: 'Already have an account?',
     continueWithGoogle: 'Continue with Google',
     continueOffline: 'Continue without an account',
@@ -125,7 +125,7 @@ const en = {
     invalidCredentials: 'That email and password do not match. Please try again.',
     emailTaken: 'An account already exists for that email.',
     notConfigured:
-      'Accounts are not set up in this build. You can keep using Fresora on this device.',
+      'Accounts are not set up in this build. You can keep using FreshCO AI on this device.',
   },
   home: {
     greetingMorning: 'Good morning',
@@ -172,7 +172,7 @@ const en = {
     stageRecommend: 'Preparing recommendations',
     permissionTitle: 'Camera access needed',
     permissionBody:
-      'Fresora needs your camera to look at your food. Your photos stay on your device unless you save them.',
+      'FreshCO AI needs your camera to look at your food. Your photos stay on your device unless you save them.',
     permissionCta: 'Allow camera',
     permissionDeniedBody:
       'Camera access is turned off. You can enable it in Settings, or pick a photo from your gallery instead.',
@@ -312,12 +312,12 @@ const en = {
     cookedToast: '{{count}} ingredients marked consumed.',
     selectIngredients: 'Choose ingredients',
     emptyTitle: 'Recipes appear when ingredients need attention.',
-    emptyBody: 'Scan your food and Fresora will suggest ways to use it up.',
+    emptyBody: 'Scan your food and FreshCO AI will suggest ways to use it up.',
     emptySaved: 'No saved recipes yet.',
     excludedSpoiled: 'Items assessed as spoiled were left out.',
     notConfigured: 'Recipe generation needs an AI provider',
     notConfiguredBody:
-      'No AI provider is configured on the server, so Fresora used its built-in recipe matcher instead.',
+      'No AI provider is configured on the server, so FreshCO AI used its built-in recipe matcher instead.',
   },
   assistant: {
     title: 'Ask anything about your food.',
@@ -372,7 +372,7 @@ const en = {
     estimatedLabel: 'Estimated',
     methodologyTitle: 'How these numbers are calculated',
     methodologyBody:
-      'Items rescued counts inventory you marked consumed while it was flagged as needing attention. Rescue rate is consumed ÷ (consumed + discarded). Fresora does not estimate money or carbon saved, because that would require data it does not have.',
+      'Items rescued counts inventory you marked consumed while it was flagged as needing attention. Rescue rate is consumed ÷ (consumed + discarded). FreshCO AI does not estimate money or carbon saved, because that would require data it does not have.',
     emptyTitle: 'No activity yet.',
     emptyBody: 'Scan some food and your saving activity will show up here.',
   },
@@ -401,7 +401,7 @@ const en = {
     onList: 'On your list',
     duplicateWarning: 'You already have {{food}} at home.',
     emptyTitle: 'Nothing to suggest yet.',
-    emptyBody: 'Use your inventory for a while and Fresora will learn what you restock.',
+    emptyBody: 'Use your inventory for a while and FreshCO AI will learn what you restock.',
     clearList: 'Clear list',
   },
   profile: {
@@ -414,7 +414,7 @@ const en = {
     language: 'Language',
     settings: 'Settings',
     privacy: 'Privacy',
-    about: 'About Fresora',
+    about: 'About FreshCO AI',
     preferences: 'PREFERENCES',
     account: 'ACCOUNT',
     data: 'YOUR DATA',
@@ -452,9 +452,9 @@ const en = {
     networkBody: 'Connect to the internet to analyze new photos. Your saved food still works.',
     serverTitle: 'Analysis server not reachable',
     serverBody:
-      'Your device is online, but the Fresora analysis server did not respond. Check that it is running and on the same network, then try again.',
+      'Your device is online, but the FreshCO AI analysis server did not respond. Check that it is running and on the same network, then try again.',
     modelTitle: 'Which food is this?',
-    modelBody: 'Automatic food identification is off in this build, so Fresora could not name the food itself. Pick it below and the full analysis runs straight away.',
+    modelBody: 'Automatic food identification is off in this build, so FreshCO AI could not name the food itself. Pick it below and the full analysis runs straight away.',
     imageTitle: 'That image is hard to read',
     imageBody:
       'That image is a little difficult to analyze. Try placing the food in better lighting and capture a clearer image.',
@@ -465,7 +465,7 @@ const en = {
     assistantFailed: 'The assistant could not answer that. Please try again.',
     recipeFailed: 'We could not build a recipe just now.',
     permissionTitle: 'Permission needed',
-    galleryPermissionBody: 'Fresora needs access to your photos to analyze an existing image.',
+    galleryPermissionBody: 'FreshCO AI needs access to your photos to analyze an existing image.',
     noFoodDetected: 'We could not find a food item in that photo.',
     noFoodDetectedBody: 'Fill more of the frame with the food and try again.',
   },

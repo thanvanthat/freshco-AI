@@ -24,7 +24,7 @@ STORAGE_TYPES: frozenset[str] = frozenset(get_args(StorageType))
 
 #: The single safety notice shown wherever an assessment is displayed.
 SAFETY_NOTICE = (
-    "Fresora analyzes visible food characteristics from images. It cannot "
+    "FreshCO AI analyzes visible food characteristics from images. It cannot "
     "detect microscopic bacteria, odorless toxins, or all internal food-safety "
     "hazards. Results are AI-assisted estimates, not official food-safety "
     "guarantees."

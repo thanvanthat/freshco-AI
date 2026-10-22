@@ -1,5 +1,5 @@
 /**
- * Fresora colour tokens.
+ * FreshCO AI colour tokens.
  *
  * Nature + premium editorial. Every colour in the app comes from here --
  * never inline a hex value in a component.

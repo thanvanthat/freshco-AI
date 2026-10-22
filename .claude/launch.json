@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "fresora-web",
+      "name": "freshco-web",
       "url": "http://localhost:8081"
     }
   ]

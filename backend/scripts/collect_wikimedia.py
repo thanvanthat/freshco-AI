@@ -26,7 +26,7 @@ from pathlib import Path
 logger = logging.getLogger("collect")
 
 API = "https://commons.wikimedia.org/w/api.php"
-UA = "FresoraTrainingCollector/1.0 (food freshness research; non-commercial)"
+UA = "FreshCO AITrainingCollector/1.0 (food freshness research; non-commercial)"
 
 #: Search terms per class. Several per class because a single term returns a
 #: narrow slice -- "raw chicken" alone skews heavily to whole birds.

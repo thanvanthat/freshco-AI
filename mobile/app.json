@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Fresora",
-    "slug": "fresora",
+    "name": "FreshCO AI",
+    "slug": "freshco",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "fresora",
+    "scheme": "freshco",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -15,15 +15,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fresora.app",
+      "bundleIdentifier": "com.freshco.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Fresora uses your camera to assess the visible condition of your food.",
-        "NSPhotoLibraryUsageDescription": "Fresora needs access to your photos so you can analyze an existing picture of your food.",
-        "NSPhotoLibraryAddUsageDescription": "Fresora can save the photos you capture of your food."
+        "NSCameraUsageDescription": "FreshCO AI uses your camera to assess the visible condition of your food.",
+        "NSPhotoLibraryUsageDescription": "FreshCO AI needs access to your photos so you can analyze an existing picture of your food.",
+        "NSPhotoLibraryAddUsageDescription": "FreshCO AI can save the photos you capture of your food."
       }
     },
     "android": {
-      "package": "com.fresora.app",
+      "package": "com.freshco.app",
       "adaptiveIcon": {
         "backgroundColor": "#E4EDE6",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -49,13 +49,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Fresora uses your camera to assess the visible condition of your food."
+          "cameraPermission": "FreshCO AI uses your camera to assess the visible condition of your food."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Fresora needs access to your photos so you can analyze an existing picture of your food."
+          "photosPermission": "FreshCO AI needs access to your photos so you can analyze an existing picture of your food."
         }
       ],
       [

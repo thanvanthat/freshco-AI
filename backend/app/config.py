@@ -87,7 +87,7 @@ def _resolve_model() -> str:
 class Settings:
     """Immutable settings snapshot."""
 
-    app_name: str = "Fresora API"
+    app_name: str = "FreshCO AI API"
     api_prefix: str = "/api/v1"
     debug: bool = field(default_factory=lambda: _env_bool("DEBUG", False))
 

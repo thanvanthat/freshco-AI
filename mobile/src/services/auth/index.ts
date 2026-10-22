@@ -4,7 +4,7 @@ import { getSupabase } from '../supabase';
 /**
  * Authentication.
  *
- * With Supabase configured, this is Supabase Auth. Without it, Fresora runs
+ * With Supabase configured, this is Supabase Auth. Without it, FreshCO AI runs
  * in **local mode**: there is no account, the data lives on the device, and the
  * auth screens say so plainly rather than offering a sign-in that cannot work.
  *

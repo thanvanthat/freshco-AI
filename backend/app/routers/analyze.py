@@ -317,7 +317,7 @@ async def analyze(
                 storage_recommendation=StorageRecommendation(
                     headline="Tell us what this is",
                     details=[
-                        "Choose the food name and Fresora will assess it and "
+                        "Choose the food name and FreshCO AI will assess it and "
                         "recommend storage."
                     ],
                     storage_type="refrigerated",
@@ -361,7 +361,7 @@ async def analyze(
     if record is None:
         note = (
             note or ""
-        ) + " Fresora has no reference data for this food, so storage advice and the freshness window are generic."
+        ) + " FreshCO AI has no reference data for this food, so storage advice and the freshness window are generic."
         note = note.strip()
 
     # --- Measure and score ------------------------------------------------
@@ -519,7 +519,7 @@ async def detect_foods(image: UploadFile = File(...)) -> DetectResponse:
         note = (
             "Found "
             + ", ".join(sorted(set(unknown)))
-            + ", which Fresora has no reference data for. Name them to get a score."
+            + ", which FreshCO AI has no reference data for. Name them to get a score."
         )
     elif not items:
         note = (
@@ -590,7 +590,7 @@ async def storage_recommendation(request: StorageRequest) -> StorageResponse:
                 preservation=[],
             ),
             known=False,
-            note="This food is not in Fresora's reference data yet.",
+            note="This food is not in FreshCO AI's reference data yet.",
         )
 
     return StorageResponse(

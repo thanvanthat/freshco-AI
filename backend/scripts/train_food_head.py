@@ -45,7 +45,7 @@ start and switches from "imagenet" to "custom" mode automatically.
 
 A HEALTH WARNING
 ----------------
-Fresora caps the freshness score for meat, poultry, seafood and dairy because a
+FreshCO AI caps the freshness score for meat, poultry, seafood and dairy because a
 photograph cannot establish whether those are safe to eat. Identifying them
 automatically does not change that, and this script deliberately does not
 provide a way to lift the cap.

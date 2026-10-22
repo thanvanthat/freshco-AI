@@ -53,7 +53,7 @@ export const SUPABASE_ANON_KEY =
  * True when both Supabase values are present.
  *
  * Drives which FoodStore the app builds and whether the auth screens offer real
- * accounts. With no project configured, Fresora runs fully on-device.
+ * accounts. With no project configured, FreshCO AI runs fully on-device.
  */
 export const SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 

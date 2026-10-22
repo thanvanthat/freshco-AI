@@ -14,7 +14,7 @@ was off in local development too.
 Two modes
 ---------
 **imagenet** (default): the stock MobileNetV2 graph classifies into the 1000
-ImageNet classes, and ``IMAGENET_FOOD_MAP`` narrows those to food names Fresora
+ImageNet classes, and ``IMAGENET_FOOD_MAP`` narrows those to food names FreshCO AI
 knows. This identifies fruit and vegetables. It cannot identify raw meat,
 poultry or fish, because ImageNet-1k has no class for them -- no amount of
 wiring changes that, only a model trained on those classes does.

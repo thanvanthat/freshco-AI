@@ -4,7 +4,7 @@ import { API_TIMEOUT_MS, API_UPLOAD_TIMEOUT_MS, API_URL } from '../../constants/
 import { useAppStore } from '../../store/app';
 
 /**
- * Typed fetch wrapper for the Fresora API.
+ * Typed fetch wrapper for the FreshCO AI API.
  *
  * Its job is to turn every possible failure into an `ApiError` carrying a
  * **stable machine code**. Screens map that code to a localised string from the
@@ -167,7 +167,7 @@ async function withTimeout(
     throw new ApiError(
       deviceIsOnline ? 'server' : 'network',
       deviceIsOnline
-        ? 'The device has a connection but the Fresora server did not respond.'
+        ? 'The device has a connection but the FreshCO AI server did not respond.'
         : 'The device has no network connection.',
     );
   } finally {
