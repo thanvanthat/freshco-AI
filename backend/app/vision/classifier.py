@@ -342,7 +342,7 @@ class FoodClassifier:
     ) -> Identification:
         decoded = self._decode_imagenet(raw, top_k)
         raw_labels = [(str(name), float(score)) for _, name, score in decoded]
-        is_red = median_hue is not None and (median_hue < RED_HUE_MAX or median_hue > 170)
+        is_red = is_red_hue(median_hue)
 
         mapped: list[Prediction] = []
         rejected_orange = False
@@ -412,6 +412,22 @@ class FoodClassifier:
                 "name to continue -- the surface measurements below were still taken."
             ),
         )
+
+
+def is_red_hue(median_hue: float | None) -> bool:
+    """Whether a median hue is red rather than orange (red wraps past 170)."""
+    return median_hue is not None and (median_hue < RED_HUE_MAX or median_hue > 170)
+
+
+def looks_red(image_bgr: np.ndarray) -> bool:
+    """Whether the food in this image is red -- i.e. not an orange.
+
+    Shared by the classifier and the detector. Both models were trained on
+    datasets with no tomato class, and both file red round produce under
+    "orange"; the detector skipping this check is how a tomato came back named
+    Orange after the classifier had correctly refused to.
+    """
+    return is_red_hue(_median_hue(image_bgr))
 
 
 def _median_hue(image_bgr: np.ndarray) -> float | None:

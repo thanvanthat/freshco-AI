@@ -27,10 +27,12 @@ classifier has, for the same reason.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
+
+from .classifier import looks_red
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +306,16 @@ class FoodDetector:
         # Sorting first is what makes deduplicate an NMS: the most confident
         # box of each cluster is kept and the rest are suppressed against it.
         found.sort(key=lambda d: d.confidence, reverse=True)
-        return deduplicate(found)[:max_items]
+        kept = deduplicate(found)[:max_items]
+
+        # COCO has no tomato class, so a red tomato comes back as "orange".
+        # Keep the box -- something is there -- but do not name it: an unnamed
+        # item lets /analyze ask the vision model, and shows in /detect as an
+        # item to name rather than as a confident wrong answer.
+        for index, detection in enumerate(kept):
+            if detection.food_name == "Orange" and looks_red(detection.crop(image_bgr)):
+                kept[index] = replace(detection, food_name=None, raw_label="red produce")
+        return kept
 
 
 _detector: FoodDetector | None = None

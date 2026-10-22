@@ -262,3 +262,41 @@ class TestRealModel:
         items = detector.detect(np.full((300, 300, 3), 128, np.uint8), max_items=3)
 
         assert len(items) <= 3
+
+
+class TestRedOrange:
+    """COCO has no tomato class: a red tomato comes back as "orange"."""
+
+    @staticmethod
+    def _detect_disc(monkeypatch: pytest.MonkeyPatch, bgr: tuple[int, int, int]):
+        import cv2
+
+        from app.vision import detector as detector_module
+
+        image = np.full((INPUT_SIZE, INPUT_SIZE, 3), 225, np.uint8)
+        cv2.circle(image, (208, 208), 150, bgr, -1)
+
+        # One confident box over the disc, classed as COCO "orange" (49).
+        row = np.zeros(85, np.float32)
+        row[:4] = (208, 208, 300, 300)
+        row[4] = 0.9
+        row[5 + 49] = 0.9
+        monkeypatch.setattr(detector_module, "decode", lambda _raw: row[None, :])
+
+        class _Session:
+            def run(self, *_args, **_kwargs):
+                return [np.zeros((1, 1, 85), np.float32)]
+
+        detector = FoodDetector()
+        detector._session = _Session()
+        detector._input_name = "images"
+        return detector.detect(image)
+
+    def test_a_red_orange_is_left_unnamed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        (item,) = self._detect_disc(monkeypatch, (30, 30, 210))  # BGR red
+        assert item.food_name is None, "a tomato was named Orange"
+        assert item.raw_label == "red produce"
+
+    def test_a_real_orange_keeps_its_name(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        (item,) = self._detect_disc(monkeypatch, (20, 140, 245))  # BGR orange
+        assert item.food_name == "Orange"
