@@ -196,7 +196,18 @@ class OnnxFoodModel:
         if self._session is None:
             raise OnnxUnavailable("session not loaded")
         batch = preprocess(image_bgr)
-        return np.asarray(self._session.run(None, {self._input_name: batch})[0])[0]
+        return np.asarray(self._session.run(["output"], {self._input_name: batch})[0])[0]
+
+    def embedding(self, image_bgr: np.ndarray) -> np.ndarray:
+        """The 1280-d pooled image embedding, one layer before the logits.
+
+        Heads trained on this keep the colour and texture the ImageNet logits
+        discard. Added to the graph by ``scripts/expose_embedding.py``.
+        """
+        if self._session is None:
+            raise OnnxUnavailable("session not loaded")
+        batch = preprocess(image_bgr)
+        return np.asarray(self._session.run(["embedding"], {self._input_name: batch})[0])[0]
 
     def predict(self, image_bgr: np.ndarray) -> np.ndarray:
         """Class probabilities: the trained head's when present, else ImageNet's."""
