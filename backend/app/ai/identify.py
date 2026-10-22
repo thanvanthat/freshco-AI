@@ -42,10 +42,15 @@ logger = logging.getLogger(__name__)
 #: answer because it puts the food picker in front of the user.
 MIN_CONFIDENCE = 0.55
 
-#: A scan is interactive. The provider default of 45s is for the assistant,
-#: where a user has asked a question and expects to wait; here it would leave
-#: someone staring at a spinner long after they would have typed the name.
-TIMEOUT_SECONDS = 12.0
+#: A scan is interactive, so this caps the whole call, retries included.
+#:
+#: Measured on the free tier (October 2026): gemini-flash-lite-latest answered
+#: correctly in 14-17s; gemini-flash-latest took 98-110s; 503 "high demand"
+#: arrived after 10-18s. A 12s cap therefore threw away every correct answer.
+#: 20s keeps the lite model's answers and still gives up on a stalled call. This
+#: only runs when both on-device models found nothing, so ordinary scans are
+#: unaffected.
+TIMEOUT_SECONDS = 20.0
 
 _SYSTEM = (
     "You identify food in photographs for a kitchen inventory app. "
