@@ -12,8 +12,8 @@ waste.
 
 | | |
 |---|---|
-| **App** | <https://fresora-web.vercel.app> |
-| **API** | <https://fresora-api.vercel.app/api/v1/health> |
+| **App** | <https://freshco-web.vercel.app> |
+| **API** | <https://freshco-api.vercel.app/api/v1/health> |
 
 Open the app link on a phone browser — it is the same React Native codebase
 compiled for web, so no install is needed. Camera capture depends on the
