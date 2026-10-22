@@ -129,6 +129,10 @@ async def identify_food(image: bytes, *, mime_type: str = "image/jpeg"):
         logger.exception("Vision identification failed")
         return None
 
+    # Every decline below is silent to the user by design, so record what the
+    # model actually said -- otherwise "unidentified" is undiagnosable.
+    logger.info("Vision model answered: %s", parsed)
+
     if not parsed.get("is_food"):
         return None
 
