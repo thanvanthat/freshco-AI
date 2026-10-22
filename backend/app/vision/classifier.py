@@ -420,7 +420,7 @@ def _median_hue(image_bgr: np.ndarray) -> float | None:
 
     from .metrics import segment_food  # noqa: PLC0415
 
-    mask, _, _ = segment_food(image_bgr)
+    mask, _, _ = segment_food(image_bgr, precise=False)
     hsv = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2HSV)
     hue = hsv[:, :, 0][(mask > 0) & (hsv[:, :, 1] > 60)]
     if hue.size < 500:

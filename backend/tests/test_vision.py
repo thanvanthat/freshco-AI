@@ -136,7 +136,7 @@ def test_decode_rejects_tiny_images() -> None:
 
 def test_segmentation_finds_the_disc() -> None:
     mask, source, fraction = segment_food(clean_tomato())
-    assert source == "saturation-otsu"
+    assert source == "grabcut"
 
     # The disc covers pi*r^2 / SIZE^2 of the frame.
     expected = (np.pi * RADIUS**2) / (SIZE * SIZE)
@@ -145,6 +145,50 @@ def test_segmentation_finds_the_disc() -> None:
     # And the mask should actually sit over the disc, not somewhere else.
     assert mask[CENTRE[1], CENTRE[0]] > 0, "centre of the disc is not in the mask"
     assert mask[5, 5] == 0, "a background corner is inside the mask"
+
+
+def test_saturation_threshold_is_the_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When GrabCut has nothing usable, the saturation threshold still runs."""
+    from app.vision import metrics as metrics_module
+
+    monkeypatch.setattr(metrics_module, "_grabcut_mask", lambda _image: None)
+    mask, source, _ = segment_food(clean_tomato())
+    assert source == "saturation-otsu"
+    assert mask[CENTRE[1], CENTRE[0]] > 0
+
+
+def test_pale_mould_counts_as_a_defect() -> None:
+    """Grey-white fuzz on a coloured food is mould, though it is not darker.
+
+    Defects used to mean dark spots only, so a loaf half covered in mould
+    measured 0% defects. The patches here are lighter than the disc.
+    """
+    image = clean_tomato()
+    rng = np.random.default_rng(7)
+    for _ in range(14):
+        angle, distance = rng.uniform(0, 2 * np.pi), rng.uniform(0, RADIUS * 0.7)
+        centre = (
+            int(CENTRE[0] + np.cos(angle) * distance),
+            int(CENTRE[1] + np.sin(angle) * distance),
+        )
+        cv2.circle(image, centre, int(rng.uniform(14, 24)), (200, 205, 200), -1)
+
+    clean = measure_surface(clean_tomato(), healthy_hue=(0, 12))
+    mouldy = measure_surface(image, healthy_hue=(0, 12))
+    assert clean.defect_coverage is not None and mouldy.defect_coverage is not None
+    assert clean.defect_coverage < 0.02
+    assert mouldy.defect_coverage > 0.10, "pale mould went unmeasured"
+
+
+def test_colourless_foods_are_not_read_as_mould() -> None:
+    """Idli, milk and rice are pale by nature; with no reference hue, colour
+    loss is not measured, so a sound white item is not one large defect."""
+    white = _canvas()
+    white[:] = (90, 70, 60)  # dark worktop, so the white disc stands out
+    cv2.circle(white, CENTRE, RADIUS, (235, 238, 240), -1)
+    metrics = measure_surface(white, healthy_hue=None)
+    assert metrics.defect_coverage is not None
+    assert metrics.defect_coverage < 0.02
 
 
 def test_segmentation_falls_back_on_a_flat_image() -> None:
@@ -161,7 +205,7 @@ def test_segmentation_falls_back_on_a_flat_image() -> None:
 def test_clean_item_measures_well() -> None:
     metrics = measure_surface(clean_tomato(), healthy_hue=(0, 12))
 
-    assert metrics.mask_source == "saturation-otsu"
+    assert metrics.mask_source == "grabcut"
 
     assert metrics.defect_coverage is not None
     assert metrics.defect_coverage < 0.02, "a clean disc should show almost no defects"

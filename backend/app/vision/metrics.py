@@ -11,7 +11,10 @@ Pipeline
 3. segment the food region from the background
 4. measure, inside the mask only:
    - browning index      (CIELAB -> published BI formula)
-   - defect coverage     (dark-spot fraction relative to the item's own tone)
+   - defect coverage     (dark spots relative to the item's own tone, plus --
+                          for foods with a characteristic colour -- patches
+                          that have lost their colour, which is how mould
+                          looks)
    - discoloration       (hue drift away from the food's healthy hue band)
    - texture uniformity  (consistency of local Laplacian energy)
    - colour consistency  (spread of hue and chroma)
@@ -19,13 +22,17 @@ Pipeline
 
 Segmentation
 ------------
-Foods are usually more saturated than the surface they sit on, so an Otsu
-threshold on the HSV saturation channel plus the largest connected component
-isolates the item well for typical phone photos. When that produces an
-implausible mask (under 8% or over 97% of the frame -- e.g. a pale item on a
-white plate) we fall back to a centred ellipse covering the middle of the frame,
-which matches the on-screen capture guide the scanner draws. ``mask_source`` on
-the result records which path ran, so the behaviour is never opaque.
+GrabCut first: it learns the background from the frame's border and keeps
+whatever is unlike it. This replaced an Otsu threshold on HSV saturation as the
+first choice, because saturation failed in exactly the case that matters most.
+Mould is pale and colourless, so on a mouldy loaf the saturation mask picked a
+dark corner of the oven instead -- near-black pixels have meaningless, noisy
+saturation -- and the loaf scored 93/100 "fresh" on measurements of the tray.
+
+The saturation threshold remains the fallback when GrabCut's mask is
+implausible (under 8% or over 97% of the frame), and a centred ellipse matching
+the scanner's capture guide is the last resort. ``mask_source`` on the result
+records which path ran, so the behaviour is never opaque.
 """
 
 from __future__ import annotations
@@ -52,6 +59,30 @@ _BI_REFERENCE = 180.0
 #: own median L*. Relative rather than absolute, so a naturally dark item such
 #: as a brinjal is not scored as one large defect.
 _DEFECT_L_DROP = 28.0
+
+#: A lit pixel (L* between these bounds) with CIELAB chroma below
+#: ``_COLOUR_LOSS_CHROMA`` has lost its colour -- the grey, white or blue-grey
+#: of mould. Counted only for foods with a characteristic colour.
+#:
+#: Measured on GrabCut masks: mouldy bread 0.42 of the surface, mouldy tomato
+#: 0.16, mouldy cheese 0.52; sound bread, apple, tomato and a fruit bowl at most
+#: 0.01, and flour-dusted rolls -- the hardest clean case -- 0.07. The L* bounds
+#: keep out shadow (also colourless, but dark) and specular glare.
+_COLOUR_LOSS_CHROMA = 10.0
+_COLOUR_LOSS_L_MIN = 35.0
+_COLOUR_LOSS_L_MAX = 92.0
+
+#: GrabCut runs on a copy at most this many pixels on its longest edge; the
+#: mask is scaled back up. Cost grows with pixel count and a coarse outline is
+#: all the measurements need.
+_GRABCUT_EDGE = 192
+_GRABCUT_ITERATIONS = 2
+#: Share of each side treated as known background.
+_GRABCUT_BORDER = 0.04
+#: Rim trimmed off the GrabCut mask, as a share of the item's equivalent
+#: radius. On a JPEG disc this cut background inside the mask from 15% to
+#: about 2.5%, while a sharp-edged disc kept 86% of its area.
+_GRABCUT_RIM_TRIM = 0.07
 
 #: Block size, in pixels, for the local-texture pass.
 _TEXTURE_BLOCK = 16
@@ -156,10 +187,79 @@ def _fill_holes(mask: np.ndarray) -> np.ndarray:
     return filled
 
 
-def segment_food(image: np.ndarray) -> tuple[np.ndarray, str, float]:
-    """Return (mask, source, fraction) isolating the food from the background."""
+def _largest_component(mask: np.ndarray) -> np.ndarray:
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    if count <= 1:
+        return mask
+    # Label 0 is the background component; keep the largest of the rest.
+    largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    return np.where(labels == largest, 255, 0).astype(np.uint8)
+
+
+def _grabcut_mask(image: np.ndarray) -> np.ndarray | None:
+    """Foreground mask from GrabCut, seeded with the frame border as background."""
+    height, width = image.shape[:2]
+    scale = min(1.0, _GRABCUT_EDGE / max(height, width))
+    small = cv2.resize(
+        image,
+        (max(1, round(width * scale)), max(1, round(height * scale))),
+        interpolation=cv2.INTER_AREA,
+    )
+    small_h, small_w = small.shape[:2]
+    margin_x = max(2, int(small_w * _GRABCUT_BORDER))
+    margin_y = max(2, int(small_h * _GRABCUT_BORDER))
+    rect = (margin_x, margin_y, small_w - 2 * margin_x, small_h - 2 * margin_y)
+    if rect[2] < 8 or rect[3] < 8:
+        return None
+
+    labels = np.zeros((small_h, small_w), np.uint8)
+    try:
+        cv2.grabCut(
+            small,
+            labels,
+            rect,
+            np.zeros((1, 65), np.float64),
+            np.zeros((1, 65), np.float64),
+            _GRABCUT_ITERATIONS,
+            cv2.GC_INIT_WITH_RECT,
+        )
+    except cv2.error:
+        # A uniform image leaves GrabCut nothing to model.
+        return None
+
+    foreground = np.where(
+        (labels == cv2.GC_FGD) | (labels == cv2.GC_PR_FGD), 255, 0
+    ).astype(np.uint8)
+    foreground = _fill_holes(_largest_component(foreground))
+    mask = cv2.resize(foreground, (width, height), interpolation=cv2.INTER_NEAREST)
+
+    # Trim the rim. JPEG smears an item's edge into the background, and GrabCut
+    # keeps that smear: on a clean red disc on grey, 15% of the mask was grey
+    # background, which reads as colour loss -- i.e. as mould. The trim scales
+    # with the item, not the frame, so a small item is not trimmed away.
+    item_radius = math.sqrt(float(np.count_nonzero(mask)) / math.pi)
+    radius = max(1, round(item_radius * _GRABCUT_RIM_TRIM))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * radius + 1, 2 * radius + 1))
+    return cv2.erode(mask, kernel)
+
+
+def segment_food(
+    image: np.ndarray, *, precise: bool = True
+) -> tuple[np.ndarray, str, float]:
+    """Return (mask, source, fraction) isolating the food from the background.
+
+    ``precise=False`` skips GrabCut, which costs several hundred milliseconds.
+    For a caller that only wants the colour of the saturated pixels -- the
+    classifier's hue check -- the saturation threshold was always enough.
+    """
     height, width = image.shape[:2]
     total = height * width
+
+    grabcut = _grabcut_mask(image) if precise else None
+    if grabcut is not None:
+        fraction = float(np.count_nonzero(grabcut)) / total
+        if _MIN_MASK_FRACTION <= fraction <= _MAX_MASK_FRACTION:
+            return grabcut, "grabcut", fraction
 
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     saturation = cv2.GaussianBlur(hsv[:, :, 1], (5, 5), 0)
@@ -227,14 +327,33 @@ def _browning_index(lab_pixels: np.ndarray) -> float | None:
     return float(np.clip(mean_bi / _BI_REFERENCE, 0.0, 1.0))
 
 
-def _defect_coverage(lightness: np.ndarray) -> float | None:
-    """Share of the surface that is markedly darker than the item's own tone."""
+def _defect_coverage(
+    lightness: np.ndarray,
+    chroma: np.ndarray,
+    measure_colour_loss: bool,
+) -> float | None:
+    """Share of the surface showing visible spoilage.
+
+    Two kinds of pixel count. Dark spots -- rot, bruising -- are judged against
+    the item's own median tone. Colour loss -- mould -- cannot be: on a loaf
+    that is mostly mould, the median *is* mould. So it is judged against the
+    food's known colour instead, and only for foods that have one; for idli,
+    milk or rice, colourless is simply what sound food looks like.
+    """
     if lightness.size < _MIN_MASK_PIXELS:
         return None
 
     median_l = float(np.median(lightness))
-    dark = lightness < (median_l - _DEFECT_L_DROP)
-    return float(np.count_nonzero(dark)) / float(lightness.size)
+    defect = lightness < (median_l - _DEFECT_L_DROP)
+
+    if measure_colour_loss:
+        defect |= (
+            (chroma < _COLOUR_LOSS_CHROMA)
+            & (lightness > _COLOUR_LOSS_L_MIN)
+            & (lightness < _COLOUR_LOSS_L_MAX)
+        )
+
+    return float(np.count_nonzero(defect)) / float(lightness.size)
 
 
 def _hue_distance(hue: np.ndarray, band: tuple[int, int]) -> np.ndarray:
@@ -388,7 +507,12 @@ def measure_surface(
     lightness = lab_pixels[:, 0]
 
     result.browning_index = _browning_index(lab_pixels) if measure_browning else None
-    result.defect_coverage = _defect_coverage(lightness)
+    # healthy_hue is the knowledge base's statement that this food has a
+    # characteristic colour, which is what makes colour loss meaningful.
+    chroma = np.hypot(lab_pixels[:, 1], lab_pixels[:, 2])
+    result.defect_coverage = _defect_coverage(
+        lightness, chroma, measure_colour_loss=healthy_hue is not None
+    )
     result.discoloration = _discoloration(hue, healthy_hue)
     result.texture_uniformity = _texture_uniformity(gray, mask)
     result.color_consistency = _color_consistency(hue, saturation)

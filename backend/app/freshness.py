@@ -153,6 +153,10 @@ def is_high_risk(category: str, record: FoodRecord | None) -> bool:
     return category in HIGH_RISK_CATEGORIES or (record is not None and record.high_risk)
 
 
+#: Share of the surface showing visible defects at which an item is a total
+#: loss: the defect signal saturates here, and the status becomes spoiled.
+TOTAL_LOSS_DEFECT_COVERAGE = 0.33
+
 #: Highest score a high-risk food may receive from visual analysis alone.
 HIGH_RISK_SCORE_CAP = 72
 
@@ -220,7 +224,9 @@ def assess(
     if metrics.defect_coverage is not None:
         # Defect coverage saturates well below 100% of the surface: a third of
         # the surface visibly decayed is already a total loss.
-        signals.append(("defect", min(metrics.defect_coverage / 0.33, 1.0)))
+        signals.append(
+            ("defect", min(metrics.defect_coverage / TOTAL_LOSS_DEFECT_COVERAGE, 1.0))
+        )
 
     if metrics.browning_index is not None:
         signals.append(("browning", min(metrics.browning_index * browning_penalty, 1.0)))
@@ -259,6 +265,16 @@ def assess(
     penalty = max(0.0, min(penalty, 1.0))
     score = int(round(100 * (1.0 - penalty)))
 
+    # A weighted sum cannot say "total loss": with every other signal clean, a
+    # loaf half covered in mould lost only the defect weight and read 42/100,
+    # "nearly spoiled". Past total-loss coverage, the item is spoiled.
+    total_loss = (
+        metrics.defect_coverage is not None
+        and metrics.defect_coverage >= TOTAL_LOSS_DEFECT_COVERAGE
+    )
+    if total_loss:
+        score = min(score, OVERRIPE_MIN - 1)
+
     capped = False
     if is_high_risk(category, record) and score > HIGH_RISK_SCORE_CAP:
         score = HIGH_RISK_SCORE_CAP
@@ -266,18 +282,27 @@ def assess(
 
     status = _status_for_score(score, category)
 
+    reasoning = _build_reasoning(
+        metrics,
+        contributions,
+        capped,
+        f"{category} items"
+        if category in HIGH_RISK_CATEGORIES or record is None
+        else record.name.lower(),
+    )
+    if total_loss:
+        reasoning.insert(
+            0,
+            f"Visible spoilage covers {metrics.defect_coverage:.0%} of the surface, "
+            "past the point where the item can be salvaged. Do not eat it; "
+            "mould can reach further than it shows.",
+        )
+
     return FreshnessAssessment(
         score=score,
         status=status,
         contributions=contributions,
-        reasoning=_build_reasoning(
-            metrics,
-            contributions,
-            capped,
-            f"{category} items"
-            if category in HIGH_RISK_CATEGORIES or record is None
-            else record.name.lower(),
-        ),
+        reasoning=reasoning,
         capped=capped,
     )
 
@@ -294,7 +319,8 @@ def _build_reasoning(
     descriptions = {
         "defect": lambda: (
             f"About {metrics.defect_coverage:.0%} of the visible surface is markedly "
-            f"darker than the rest, which reads as spots or decay."
+            f"darker than the rest or has lost its colour, which reads as spots, "
+            f"decay or mould."
         ),
         "browning": lambda: (
             f"The surface browning index measured {metrics.browning_index:.2f} "

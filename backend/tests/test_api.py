@@ -221,7 +221,7 @@ def test_vision_analysis_returns_measurements_only(client: TestClient) -> None:
     assert response.status_code == 200
 
     body = response.json()
-    assert body["mask_source"] == "saturation-otsu"
+    assert body["mask_source"] == "grabcut"
     assert 0 < body["mask_fraction"] < 1
     assert body["visual_metrics"]["color_consistency"] is not None
     # No score and no status on this endpoint.

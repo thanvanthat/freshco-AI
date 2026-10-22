@@ -211,3 +211,23 @@ def _run() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(_run())
+
+
+def test_total_loss_coverage_is_spoiled_however_clean_the_rest() -> None:
+    """Half a loaf under mould is spoiled, not "nearly spoiled".
+
+    With every other signal clean, the weighted sum alone left this at 42/100.
+    """
+    from dataclasses import replace
+
+    from app.freshness import OVERRIPE_MIN, TOTAL_LOSS_DEFECT_COVERAGE
+
+    bread = knowledge.resolve("Bread")
+    mouldy = replace(pristine(), defect_coverage=0.5)
+    result = assess(mouldy, "bakery", bread)
+    assert result.status == "spoiled"
+    assert result.score < OVERRIPE_MIN
+    assert "Do not eat it" in result.reasoning[0]
+
+    just_under = replace(pristine(), defect_coverage=TOTAL_LOSS_DEFECT_COVERAGE - 0.01)
+    assert assess(just_under, "bakery", bread).status != "spoiled"
