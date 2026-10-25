@@ -268,7 +268,7 @@ def test_the_head_cannot_rescue_visible_mould() -> None:
 def test_an_uncertain_head_changes_nothing() -> None:
     tomato = knowledge.resolve("Tomato")
     plain = assess(declining(), "vegetable", tomato)
-    unsure = assess(declining(), "vegetable", tomato, rot_probability=0.5)
+    unsure = assess(declining(), "vegetable", tomato, rot_probability=0.8)
     assert unsure.score == plain.score
 
 

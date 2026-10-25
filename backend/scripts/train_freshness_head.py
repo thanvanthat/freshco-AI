@@ -28,9 +28,9 @@ Trained on 2,700 photos of 9 produce types (Densu341/Fresh-rotten-fruit):
 Its probabilities are near 0 or 1 even when wrong, and on the independent set
 it called ~40% of sound fruit rotten. So ``app/freshness.py`` never lets it
 declare anything spoiled: a confident "rotten" caps the score at nearly
-spoiled ("inspect it"), a confident "sound" lets an undamaged item read fresh.
-Under that policy, rotten fruit shown as fresh fell from 29.5% to 5.2% with no
-increase in sound fruit shown as spoiled (0.5%).
+spoiled ("inspect it"), and a "sound" lean (<= 0.7) lets an undamaged item
+read fresh. See FRESHNESS_MODEL_SOUND in app/freshness.py for the measured
+trade-off.
 """
 
 from __future__ import annotations

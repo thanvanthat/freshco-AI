@@ -73,13 +73,23 @@ The training photos include rotated and padded augmentations, and both sets
 are studio shots on plain backgrounds. Its probabilities sit near 0 or 1 even
 when wrong, and on the independent set it called ~40% of sound fruit rotten.
 
-**How the app uses it, because of that.** A confident "rotten" (≥0.9) caps the
-score at 60 — *nearly spoiled, inspect it*, never *spoiled*. A confident
-"sound" (≤0.1) lets an item the formula found undamaged read fresh, so shadows
-and shine stop costing it the label. On the independent set this cut rotten
-fruit shown as **fresh** from 29.5% to 5.2%, with sound fruit shown as
-**spoiled** unchanged at 0.5%. Visible mould still reads spoiled through the
+**How the app uses it, because of that.** A "rotten" verdict (≥0.95) caps the
+score at 60 — *nearly spoiled, inspect it*, never *spoiled*. A "sound" lean
+(≤0.7) lets an item the formula found undamaged read fresh, so shadows and
+shine stop costing it the label. Visible mould still reads spoiled through the
 formula's own total-loss rule.
+
+On the 420 independent photos of foods in the knowledge base:
+
+| | Sound fruit shown fresh | Rotten fruit shown fresh |
+|---|---|---|
+| Formula alone | 43.3% | 29.5% |
+| Head, first shipped (≤0.1 / ≥0.9) | 48.1% | 5.2% |
+| **Head, current (≤0.7 / ≥0.95)** | **59.0%** | **8.6%** |
+
+Sound fruit shown *spoiled* is 0.5% in every row. The cutoffs were loosened
+because ~40% of sound fruit reads "nearly spoiled" from the formula alone;
+tightening only the rotten side barely reduced that.
 
 ### 2b. `apple_pomegranate_head.npz` — shipped
 

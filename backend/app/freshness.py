@@ -160,9 +160,23 @@ TOTAL_LOSS_DEFECT_COVERAGE = 0.33
 #: Where the trained freshness head applies: it was trained on produce only.
 FRESHNESS_MODEL_CATEGORIES: frozenset[str] = frozenset({"fruit", "vegetable"})
 #: Head probability of "rotten" at or above which the score is capped.
-FRESHNESS_MODEL_ROTTEN = 0.9
-#: ...and at or below which an undamaged item may read fresh.
-FRESHNESS_MODEL_SOUND = 0.1
+FRESHNESS_MODEL_ROTTEN = 0.95
+#: ...and at or below which an item the formula found undamaged may read fresh.
+#:
+#: Both cutoffs were loosened from 0.1 / 0.9 after measuring on the 420
+#: independently photographed fruit with a known food (one fixed split; the
+#: two halves agree to within 4 points):
+#:
+#:                          sound shown fresh   rotten shown fresh
+#:   formula alone                43.3%               29.5%
+#:   head at 0.1 / 0.9            48.1%                5.2%
+#:   head at 0.7 / 0.95           59.0%                8.6%   <- shipped
+#:   head at 0.7 / 0.99           61.4%               11.4%
+#:
+#: Sound fruit shown spoiled stays 0.5% throughout. Moving the rotten cutoff
+#: alone helps little: ~40% of sound fruit reads "nearly spoiled" from the
+#: formula before the head is consulted, and the head sits near 1 for most fruit.
+FRESHNESS_MODEL_SOUND = 0.7
 #: The cap: inside "nearly spoiled", never "spoiled". Capping into "spoiled"
 #: instead called 40% of sound independent fruit spoiled; this cap moved that
 #: from 0.5% to 0.5%, while rotten fruit shown as fresh fell from 29.5% to 5.2%.
@@ -313,8 +327,8 @@ def assess(
     ):
         score = FRESH_MIN
         model_note = (
-            "A model trained on fresh and rotten produce sees no sign of spoilage, "
-            "so uneven lighting and shine are not counted against it."
+            "A model trained on fresh and rotten produce does not see clear signs "
+            "of spoilage, so uneven lighting and shine are not counted against it."
         )
 
     capped = False
