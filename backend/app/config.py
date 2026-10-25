@@ -30,7 +30,10 @@ def _env_list(name: str, default: list[str]) -> list[str]:
 _DEFAULT_MODELS: dict[str, str] = {
     "anthropic": "claude-sonnet-5",
     "openai": "gpt-4o-mini",
-    "gemini": "gemini-flash-latest",
+    # The lite model: on the free tier, gemini-flash-latest took 45 s or more
+    # per answer or returned 503, so every assistant reply fell back. The lite
+    # model answered the same questions in under 2 s.
+    "gemini": "gemini-flash-lite-latest",
 }
 
 
