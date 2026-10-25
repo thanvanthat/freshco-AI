@@ -219,16 +219,23 @@ export default function AnalysisScreen() {
   const lowConfidence =
     result.identified && result.confidence > 0 && result.confidence < LOW_CONFIDENCE_THRESHOLD;
 
-  const windowText =
-    result.estimated_window.max_days <= 1
+  // An unscored item has a 0-day window because nothing was estimated, not
+  // because it is spoiled; it read "Spoiled -- Approximately 0 day", which
+  // would send good food to the bin.
+  const notAssessed = result.status === 'unknown';
+
+  const windowText = notAssessed
+    ? ''
+    : result.estimated_window.max_days <= 1
       ? t('analysis.windowSingle', { max: result.estimated_window.max_days })
       : t('analysis.windowRange', {
           min: result.estimated_window.min_days,
           max: result.estimated_window.max_days,
         });
 
-  const windowHeadline =
-    result.estimated_window.max_days === 0
+  const windowHeadline = notAssessed
+    ? t('status.unknown')
+    : result.estimated_window.max_days === 0
       ? t('status.spoiled')
       : // The translated phrase already carries the number; prefixing it too
         // read "~29 29 days".

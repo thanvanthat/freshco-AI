@@ -335,7 +335,7 @@ export function ShelfLifeCard({
         <Caption style={styles.shelfEyebrow}>{estimatedLabel}</Caption>
       </View>
       <Subtitle style={styles.shelfHeadline}>{headline}</Subtitle>
-      <Body style={styles.shelfDetail}>{detail}</Body>
+      {detail ? <Body style={styles.shelfDetail}>{detail}</Body> : null}
       <View style={styles.shelfDivider} />
       <Caption style={styles.shelfActionTitle}>{actionTitle}</Caption>
       <Body style={styles.shelfAction}>{action}</Body>
