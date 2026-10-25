@@ -463,3 +463,13 @@ def _run() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(_run())
+
+
+def test_browning_is_not_measured_on_red_skin_even_for_an_apple() -> None:
+    """Apple is a browning food (cut flesh browns), but a whole red apple's skin
+    saturated the index at 1.0 and cost a flawless apple 24 points."""
+    red_skin = measure_surface(clean_tomato(), healthy_hue=(0, 20), measure_browning=True)
+    assert red_skin.browning_index is None
+
+    browned = measure_surface(pale_flesh(True), healthy_hue=(15, 35), measure_browning=True)
+    assert browned.browning_index is not None, "browned flesh must still be measured"

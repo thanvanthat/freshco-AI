@@ -72,6 +72,17 @@ _COLOUR_LOSS_CHROMA = 10.0
 _COLOUR_LOSS_L_MIN = 35.0
 _COLOUR_LOSS_L_MAX = 92.0
 
+#: Median CIELAB a* (redness) at or above which a surface is red skin, where
+#: the browning index saturates and is not measured.
+#:
+#: Measured: whole red apple skin a* 44-51; fresh and browned flesh 1 and 9;
+#: rotten apples a median 19.5; bananas and potatoes 0-6. On whole produce the
+#: index did not separate fresh from rotten (apples 0.69 vs 0.73). Skipping it
+#: on red skin, with the freshness head in place, moved sound produce shown
+#: fresh 61.0% -> 62.4% across 210 photos with rotten shown fresh unchanged at
+#: 1.0%.
+_BROWNING_MAX_REDNESS = 30.0
+
 #: GrabCut runs on a copy at most this many pixels on its longest edge; the
 #: mask is scaled back up. Cost grows with pixel count and a coarse outline is
 #: all the measurements need.
@@ -506,10 +517,19 @@ def measure_surface(
     lab_pixels = lab[selected]
     lightness = lab_pixels[:, 0]
 
-    result.browning_index = _browning_index(lab_pixels) if measure_browning else None
     # healthy_hue is the knowledge base's statement that this food has a
     # characteristic colour, which is what makes colour loss meaningful.
     chroma = np.hypot(lab_pixels[:, 1], lab_pixels[:, 2])
+
+    # The browning index saturates on red: a large a* drives it to the top of
+    # the scale whatever the condition, so a flawless whole red apple measured
+    # 1.0 and lost 24 points to it. The food's name says browning *can* apply;
+    # the surface in the photo decides whether it *does*. Redness, not colour
+    # strength, is the test -- browning itself adds colour, so a colourfulness
+    # cut-off would skip exactly the browned flesh the index exists to measure.
+    red_skin = float(np.median(lab_pixels[:, 1])) >= _BROWNING_MAX_REDNESS
+    measure_browning = measure_browning and not red_skin
+    result.browning_index = _browning_index(lab_pixels) if measure_browning else None
     result.defect_coverage = _defect_coverage(
         lightness, chroma, measure_colour_loss=healthy_hue is not None
     )
@@ -526,7 +546,8 @@ def measure_surface(
 
     if not measure_browning:
         result.notes.append(
-            "Browning index is not a valid measure for this food, so it was not measured."
+            "Browning index is not a valid measure for this food or surface, so it "
+            "was not measured."
         )
 
     return result
