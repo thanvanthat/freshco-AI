@@ -77,7 +77,8 @@ _PROMPT = (
     'Idli, Chapati", '
     '"category": one of ' + ", ".join(sorted(FOOD_CATEGORIES)) + ", "
     '"confidence": 0.0-1.0, '
-    '"multiple": true if several different foods are in frame}\n\n'
+    '"other_foods": [names of any OTHER kinds of food in the photo; [] when every '
+    'item is the same food, however many there are -- four tomatoes is []]}\n\n'
     "Set is_food to false for anything that is not food. "
     "Set confidence honestly: below 0.5 if you are unsure which food it is."
 )
@@ -102,6 +103,19 @@ def _shrink(image: bytes, mime_type: str) -> tuple[bytes, str]:
         )
     ok, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
     return (encoded.tobytes(), "image/jpeg") if ok else (image, mime_type)
+
+
+def _other_kinds(parsed: dict, food_name: str) -> bool:
+    """Whether the model saw a different kind of food besides ``food_name``."""
+    others = parsed.get("other_foods")
+    if not isinstance(others, list):
+        return bool(parsed.get("multiple"))  # an older-shaped reply
+    def singular(word: str) -> str:
+        word = word.strip().lower()
+        return word[:-2] if word.endswith("oes") else word.rstrip("s")
+
+    same = singular(food_name)
+    return any(str(o).strip() and singular(str(o)) != same for o in others)
 
 
 class VisionIdentification:
@@ -180,5 +194,8 @@ async def identify_food(image: bytes, *, mime_type: str = "image/jpeg"):
         food_name=name,
         category=category,
         confidence=min(confidence, 1.0),
-        multiple=bool(parsed.get("multiple")),
+        # A list rather than a yes/no: asked "several different foods?", the
+        # model answered true for four tomatoes on one vine, and the scan threw
+        # a correct "Tomato" away as if it were a fruit bowl.
+        multiple=_other_kinds(parsed, name),
     )

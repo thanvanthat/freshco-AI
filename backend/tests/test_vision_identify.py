@@ -161,3 +161,23 @@ async def test_the_photo_is_shrunk_before_it_is_sent(provider):
     await identify.identify_food(big)
     sent = cv2.imdecode(np.frombuffer(fake.calls[0], np.uint8), cv2.IMREAD_COLOR)
     assert max(sent.shape[:2]) == identify.VISION_MAX_EDGE
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("others", "expected"),
+    [
+        ([], False),  # four tomatoes on a vine: one kind of food
+        (["Tomatoes"], False),  # the model repeating the same food
+        (["Banana", "Orange"], True),  # a fruit bowl
+    ],
+)
+async def test_several_of_the_same_food_is_not_a_fruit_bowl(provider, others, expected):
+    """Asked yes/no, the model called four tomatoes "multiple" and the scan
+    discarded a correct answer. It now lists other kinds of food instead."""
+    import json
+
+    provider(json.dumps({"is_food": True, "food_name": "Tomato", "category": "vegetable",
+                         "confidence": 0.99, "other_foods": others}))
+    seen = await identify.identify_food(b"x")
+    assert seen is not None and seen.multiple is expected
