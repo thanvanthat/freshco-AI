@@ -184,6 +184,24 @@ class FoodClassifier:
             return f"custom:{Path(self._model_path).name}"
         return "mobilenetv2-imagenet"
 
+    def rot_probability(self, image_bgr: np.ndarray) -> float | None:
+        """The freshness head's probability of "rotten", or None when unavailable.
+
+        Never raises: the freshness score has a formula to fall back on, so a
+        missing model must not fail a scan.
+        """
+        try:
+            self._ensure_loaded()
+        except ModelUnavailableError:
+            return None
+        if self._onnx is None:
+            return None
+        try:
+            return self._onnx.rot_probability(image_bgr)
+        except Exception:  # pragma: no cover - never fail a scan for this
+            logger.exception("Freshness head failed")
+            return None
+
     def is_available(self) -> bool:
         """Whether the model can be used, without raising."""
         try:

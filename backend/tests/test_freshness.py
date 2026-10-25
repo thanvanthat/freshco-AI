@@ -231,3 +231,51 @@ def test_total_loss_coverage_is_spoiled_however_clean_the_rest() -> None:
 
     just_under = replace(pristine(), defect_coverage=TOTAL_LOSS_DEFECT_COVERAGE - 0.01)
     assert assess(just_under, "bakery", bread).status != "spoiled"
+
+
+# --- Trained freshness head ------------------------------------------------
+
+
+def test_a_confident_rotten_verdict_caps_at_nearly_spoiled_never_spoiled() -> None:
+    """The head called ~40% of independent sound fruit rotten, so it may only
+    say "inspect this" -- never declare an item spoiled on its own."""
+    from app.freshness import FRESHNESS_MODEL_CAP
+
+    tomato = knowledge.resolve("Tomato")
+    result = assess(pristine(), "vegetable", tomato, rot_probability=0.97)
+    assert result.score == FRESHNESS_MODEL_CAP
+    assert result.status == "nearly_spoiled"
+    assert "Inspect it" in result.reasoning[0]
+    assert result.scoring_method.endswith("+freshness-model-v1")
+
+
+def test_a_confident_sound_verdict_lets_an_undamaged_item_read_fresh() -> None:
+    """Shadows and shine cost a fresh tomato its "fresh" label; the head can
+    restore it when the formula found no real damage."""
+    tomato = knowledge.resolve("Tomato")
+    before = assess(declining(), "vegetable", tomato)
+    after = assess(declining(), "vegetable", tomato, rot_probability=0.02)
+    assert before.status == "nearly_spoiled"
+    assert after.score == FRESH_MIN and after.status == "fresh"
+
+
+def test_the_head_cannot_rescue_visible_mould() -> None:
+    tomato = knowledge.resolve("Tomato")
+    result = assess(rotten(), "vegetable", tomato, rot_probability=0.0)
+    assert result.status == "spoiled"
+
+
+def test_an_uncertain_head_changes_nothing() -> None:
+    tomato = knowledge.resolve("Tomato")
+    plain = assess(declining(), "vegetable", tomato)
+    unsure = assess(declining(), "vegetable", tomato, rot_probability=0.5)
+    assert unsure.score == plain.score
+
+
+def test_the_head_is_ignored_outside_produce() -> None:
+    """It was trained on fruit and vegetables; its view of bread means nothing."""
+    bread = knowledge.resolve("Bread")
+    plain = assess(pristine(), "bakery", bread)
+    with_head = assess(pristine(), "bakery", bread, rot_probability=0.99)
+    assert with_head.score == plain.score
+    assert with_head.scoring_method == "opencv-heuristic-v1"

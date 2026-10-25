@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from ..ai.identify import identify_food as identify_with_vision
 from ..config import get_settings
-from ..freshness import assess, estimate_window, is_high_risk
+from ..freshness import FRESHNESS_MODEL_CATEGORIES, assess, estimate_window, is_high_risk
 from ..knowledge.food_data import browning_applicable
 from ..knowledge.service import knowledge
 from ..narrative import action_for, build_narrative
@@ -40,6 +40,17 @@ from ..vision.metrics import ImageDecodeError, decode_image, measure_surface
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["analysis"])
+
+
+def _rot_probability(image, category: str) -> float | None:
+    """The trained freshness head's view, for the foods it was trained on.
+
+    Skipped for other categories rather than computed and ignored: it costs a
+    forward pass, and an answer about bread from a produce model means nothing.
+    """
+    if category not in FRESHNESS_MODEL_CATEGORIES:
+        return None
+    return get_classifier(get_settings().model_path).rot_probability(image)
 
 
 async def _read_upload(image: UploadFile) -> bytes:
@@ -373,7 +384,7 @@ async def analyze(
         healthy_hue=record.healthy_hue if record else None,
         measure_browning=browning_applicable(display_name),
     )
-    assessment = assess(metrics, category, record)
+    assessment = assess(metrics, category, record, _rot_probability(frame, category))
 
     chosen_storage = storage_type if storage_type in STORAGE_TYPES else None
     typical = knowledge.get_typical_shelf_life(display_name, chosen_storage)
@@ -487,7 +498,9 @@ async def detect_foods(image: UploadFile = File(...)) -> DetectResponse:
             healthy_hue=record.healthy_hue,
             measure_browning=browning_applicable(record.name),
         )
-        assessment = assess(metrics, record.category, record)
+        assessment = assess(
+            metrics, record.category, record, _rot_probability(crop, record.category)
+        )
         typical = knowledge.get_typical_shelf_life(record.name)
         window = estimate_window(assessment.score, assessment.status, typical)
 

@@ -185,3 +185,10 @@ class TestRedOrange:
 
         assert ident.identified
         assert ident.food_name == "Orange"
+
+
+def test_softmax_normalises_each_row_of_a_batch() -> None:
+    """It once normalised over the whole array: two rows summed to 0.5 each."""
+    probabilities = softmax(np.array([[2.0, 0.0], [0.0, 2.0], [1.0, 1.0]]))
+    assert np.allclose(probabilities.sum(axis=1), 1.0)
+    assert probabilities[0, 0] > 0.8 and probabilities[1, 1] > 0.8

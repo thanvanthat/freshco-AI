@@ -6,10 +6,10 @@ what keeps the whole backend inside the 250 MB limit for a serverless function.
 
 | File | Role | Size | Runs when |
 |---|---|---|---|
-| `mobilenetv2-12.onnx` | Image classification | 14.0 MB | Every `/analyze` and `/food/identify` |
+| `mobilenetv2-12.onnx` | Image classification, plus a 1280-d embedding output | 14.0 MB | Every `/analyze` and `/food/identify` |
 | `imagenet_class_index.json` | Class id → label table | 35 KB | With the above |
 | `yolox_tiny.onnx` | Object detection + location | 20.2 MB | `/detect`, and `/analyze` when classification fails |
-| `protein_hint.npz` + `protein_hint_labels.txt` | Custom binary classifier | 7.9 KB | `/analyze` when nothing is identified |
+| `freshness_head.npz` | Fresh-vs-rotten head on the embedding | ~10 KB | Scoring fruit and vegetables in `/analyze` and `/detect` |
 | `head.npz` + `labels.txt` | Custom multi-class head | — | Only if you train one (not committed) |
 
 ---
@@ -34,6 +34,12 @@ fixes it. Those photos return `identified: false` rather than a guess.
 Keras-style `[-1, 1]` scaling instead would not error; it would silently
 degrade every prediction.
 
+**Second output, `embedding`.** The 1280-d pooled features one layer before
+the classifier, added by `scripts/expose_embedding.py`. Heads trained here use
+it rather than the 1000 logits: the logits are ImageNet's answer to a
+different question, and a head on top cannot overrule them -- which is how the
+raw-protein head below read mouldy bread as raw meat.
+
 ---
 
 ## 2. MobileNetV2 + custom classifier
@@ -43,30 +49,47 @@ ordinary transfer learning: the frozen features already encode colour, texture
 and shape, so the head only separates the classes. It trains on CPU in seconds
 from a few hundred images per class and adds kilobytes, not megabytes.
 
-### 2a. `protein_hint.npz` — shipped
+### 2a. `freshness_head.npz` — shipped
 
-**What it does.** Answers one question: is this raw meat, poultry or seafood?
-Used when the classifier identifies nothing, to offer a shortlist instead of
-the full food list.
+**What it does.** Estimates whether a fruit or vegetable is fresh or rotten,
+as a probability. It refines the OpenCV freshness formula; it does not replace
+it, and it is not consulted for bread, dairy, meat or cooked food.
 
-**Trained on** 404 freely-licensed Wikimedia Commons photos across chicken,
-beef, mutton, fish, prawn and a mixed "other" class.
+**Trained on** 2,700 photos of fresh and rotten apple, banana, bitter gourd,
+capsicum, cucumber, okra, orange, potato and tomato, sampled from
+[Densu341/Fresh-rotten-fruit](https://huggingface.co/datasets/Densu341/Fresh-rotten-fruit)
+(OpenRAIL). `scripts/collect_fresh_rotten.py` reproduces the sample;
+`scripts/train_freshness_head.py` reproduces the head.
 
-**Measured, on images it never trained on:**
+**Measured.** Two numbers, and only the second one matters:
 
-| Task | Accuracy |
+| Test set | Result |
 |---|---|
-| Raw protein vs everything else | **86.2%** |
-| Precision when it fires (≥0.70) | **96.6%** |
-| Recall at that threshold | 87.9% |
+| Held-out photos from the training source | 96.5% accuracy |
+| 480 **independently photographed** fruits ([Project-AgML](https://huggingface.co/datasets/Project-AgML/fresh_rotten_fruit_classification), CC-BY-4.0, 5 of 8 kinds never seen in training) | AUC 0.83, against 0.69 for the formula alone |
 
-**Deliberately not shipped: species identification.** The same data gives
-56.2% across chicken/beef/mutton/fish/prawn, and 35.7% on mutton alone. A
-model that confidently names the wrong meat is worse than one that says "raw
-protein — which?", so only the binary head is used.
+The training photos include rotated and padded augmentations, and both sets
+are studio shots on plain backgrounds. Its probabilities sit near 0 or 1 even
+when wrong, and on the independent set it called ~40% of sound fruit rotten.
 
-It is a **hint, not an identification**. The score still comes from the food
-the user picks, and the high-risk cap still applies.
+**How the app uses it, because of that.** A confident "rotten" (≥0.9) caps the
+score at 60 — *nearly spoiled, inspect it*, never *spoiled*. A confident
+"sound" (≤0.1) lets an item the formula found undamaged read fresh, so shadows
+and shine stop costing it the label. On the independent set this cut rotten
+fruit shown as **fresh** from 29.5% to 5.2%, with sound fruit shown as
+**spoiled** unchanged at 0.5%. Visible mould still reads spoiled through the
+formula's own total-loss rule.
+
+**Not shipped: a food-name head.** The same data trains one that is 97% right
+on the foods it knows — and, at ≥0.95 confidence, misnames 25% of foods it has
+never seen (strawberry → bitter gourd, pomegranate → apple). A closed set of
+nine always answers one of nine, so naming stays with ImageNet, the detector
+and the vision model.
+
+**Removed: `protein_hint.npz`.** A raw-meat-or-not head that tested at 96.6%
+precision on photos from its own source, then called mouldy bread raw meat at
+p=1.000. Removed on 30 September 2026; it is why the freshness head is judged
+on a second, independent dataset.
 
 ### 2b. `head.npz` — yours to train
 
@@ -165,14 +188,17 @@ swapped out because YOLOX is 9 MB smaller and found 12 items where SSD found
 | `mobilenetv2-12.onnx` | ONNX Model Zoo | Apache-2.0 |
 | `yolox_tiny.onnx` | Megvii YOLOX release 0.1.1rc0 | Apache-2.0 |
 | `imagenet_class_index.json` | TensorFlow/Keras | Apache-2.0 |
-| `protein_hint.npz` | Trained here | See below |
+| `mobilenetv2-12.onnx` `embedding` output | Added here, same weights | Apache-2.0 |
+| `freshness_head.npz` | Trained here on Densu341/Fresh-rotten-fruit | See below |
 
-The protein hint was trained on Wikimedia Commons photos, which carry a mix of
-free licences (CC-BY, CC-BY-SA, public domain). Whether a trained weight is a
-derivative work of its training images is unsettled, and the answer may differ
-by jurisdiction. If FreshCO AI is ever distributed commercially, retrain the head
-on photos you own — which is worth doing anyway, since your own kitchen photos
-will outperform studio shots from Commons.
+The freshness head was trained on a sample of a dataset published under the
+OpenRAIL licence, and evaluated (not trained) on Project-AgML's CC-BY-4.0
+photos, credited to Sultana, Jahan & Uddin (2022), *Data in Brief* 44:108552.
+No training photos are committed. Whether a trained weight is a derivative
+work of its training images is unsettled, and the answer may differ by
+jurisdiction. If FreshCO AI is ever distributed commercially, retrain the head
+on photos you own -- which is worth doing anyway, since phone photos from real
+kitchens will outperform studio shots.
 
 Verify these licences yourself before relying on them commercially. They are
 recorded here as a starting point, not legal advice.

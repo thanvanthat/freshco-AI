@@ -103,7 +103,7 @@ def test_analyze_with_a_named_food_returns_a_real_assessment(client: TestClient)
     assert body["status"] == "fresh"
     assert 80 <= body["score"] <= 100
     assert body["identified"] is True
-    assert body["scoring_method"] == "opencv-heuristic-v1"
+    assert body["scoring_method"].startswith("opencv-heuristic-v1")
     assert body["safety_notice"] == SAFETY_NOTICE
 
     # Measured, not asserted: processing_ms must be a real elapsed figure.

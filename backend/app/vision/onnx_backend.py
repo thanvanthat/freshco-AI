@@ -51,6 +51,9 @@ MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
 GRAPH_FILE = "mobilenetv2-12.onnx"
 CLASS_INDEX_FILE = "imagenet_class_index.json"
 HEAD_FILE = "head.npz"
+#: Fresh-vs-rotten head over the 1280-d embedding. See
+#: ``scripts/train_freshness_head.py`` for how it was trained and measured.
+FRESHNESS_HEAD_FILE = "freshness_head.npz"
 LABELS_FILE = "labels.txt"
 
 
@@ -87,12 +90,15 @@ def softmax(x: np.ndarray) -> np.ndarray:
     """
     # An all -inf vector makes the shift below inf - inf, so short-circuit it.
     if not np.isfinite(x).any():
-        return np.full(x.shape, 1.0 / x.size, dtype=np.float64)
+        return np.full(x.shape, 1.0 / x.shape[-1], dtype=np.float64)
 
-    exp = np.exp(x - np.max(x))
-    total = exp.sum()
-    if not np.isfinite(total) or total <= 0.0:
-        return np.full(x.shape, 1.0 / x.size, dtype=np.float64)
+    # Per row, as the docstring says. Normalising over the whole array instead
+    # was invisible to the API, which only passes one row, but silently wrong
+    # for any batch: a two-row input came back with rows summing to 0.5.
+    exp = np.exp(x - np.max(x, axis=-1, keepdims=True))
+    total = exp.sum(axis=-1, keepdims=True)
+    if not np.isfinite(total).all() or (total <= 0.0).any():
+        return np.full(x.shape, 1.0 / x.shape[-1], dtype=np.float64)
     return exp / total
 
 
@@ -153,6 +159,8 @@ class OnnxFoodModel:
         self._session = None
         self._input_name = ""
         self.head: TrainedHead | None = None
+        #: (weights (1280, 2), bias (2,)), or None when no head ships.
+        self.freshness_head: tuple[np.ndarray, np.ndarray] | None = None
         self.class_index: dict[int, str] = {}
 
     def load(self) -> None:
@@ -181,6 +189,12 @@ class OnnxFoodModel:
         self.class_index = load_class_index(self._models_dir)
         self.head = load_head(self._models_dir)
 
+        freshness = self._models_dir / FRESHNESS_HEAD_FILE
+        if freshness.exists():
+            with np.load(freshness) as data:
+                self.freshness_head = (data["weights"], data["bias"])
+            logger.info("Loaded freshness head")
+
     @property
     def mode(self) -> str:
         return "custom" if self.head is not None else "imagenet"
@@ -197,6 +211,17 @@ class OnnxFoodModel:
             raise OnnxUnavailable("session not loaded")
         batch = preprocess(image_bgr)
         return np.asarray(self._session.run(["output"], {self._input_name: batch})[0])[0]
+
+    def rot_probability(self, image_bgr: np.ndarray) -> float | None:
+        """Probability the trained head assigns to "rotten", or None without one.
+
+        Trained on nine kinds of produce; only meaningful for fruit and
+        vegetables, which is where ``app/freshness.py`` applies it.
+        """
+        if self.freshness_head is None:
+            return None
+        weights, bias = self.freshness_head
+        return float(softmax(self.embedding(image_bgr) @ weights + bias)[1])
 
     def embedding(self, image_bgr: np.ndarray) -> np.ndarray:
         """The 1280-d pooled image embedding, one layer before the logits.

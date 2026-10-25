@@ -157,6 +157,17 @@ def is_high_risk(category: str, record: FoodRecord | None) -> bool:
 #: loss: the defect signal saturates here, and the status becomes spoiled.
 TOTAL_LOSS_DEFECT_COVERAGE = 0.33
 
+#: Where the trained freshness head applies: it was trained on produce only.
+FRESHNESS_MODEL_CATEGORIES: frozenset[str] = frozenset({"fruit", "vegetable"})
+#: Head probability of "rotten" at or above which the score is capped.
+FRESHNESS_MODEL_ROTTEN = 0.9
+#: ...and at or below which an undamaged item may read fresh.
+FRESHNESS_MODEL_SOUND = 0.1
+#: The cap: inside "nearly spoiled", never "spoiled". Capping into "spoiled"
+#: instead called 40% of sound independent fruit spoiled; this cap moved that
+#: from 0.5% to 0.5%, while rotten fruit shown as fresh fell from 29.5% to 5.2%.
+FRESHNESS_MODEL_CAP = 60
+
 #: Highest score a high-risk food may receive from visual analysis alone.
 HIGH_RISK_SCORE_CAP = 72
 
@@ -212,8 +223,14 @@ def assess(
     metrics: SurfaceMetrics,
     category: str,
     record: FoodRecord | None = None,
+    rot_probability: float | None = None,
 ) -> FreshnessAssessment:
-    """Score a set of surface measurements."""
+    """Score a set of surface measurements.
+
+    ``rot_probability`` is the trained freshness head's output, when one ships
+    and the food is fruit or a vegetable. See ``FRESHNESS_MODEL_*`` for how far
+    it may move the score.
+    """
     family = food_family(record, category)
     weights = WEIGHTS[family]
     browning_penalty = record.browning_penalty if record is not None else 1.0
@@ -275,6 +292,31 @@ def assess(
     if total_loss:
         score = min(score, OVERRIPE_MIN - 1)
 
+    # The trained head adjusts the formula; it never replaces it. Its
+    # probabilities sit near 0 or 1 even when wrong, and on independently
+    # photographed fruit it called ~40% of sound items rotten, so it is not
+    # allowed to declare anything spoiled -- only to say "inspect this", or to
+    # stop shadows and shine counting against an item it sees no damage on.
+    model_used = rot_probability is not None and category in FRESHNESS_MODEL_CATEGORIES
+    model_note: str | None = None
+    if model_used and rot_probability >= FRESHNESS_MODEL_ROTTEN and score > FRESHNESS_MODEL_CAP:
+        score = FRESHNESS_MODEL_CAP
+        model_note = (
+            "A model trained on fresh and rotten produce sees signs of spoilage "
+            "this measurement missed. Inspect it closely before use."
+        )
+    elif (
+        model_used
+        and rot_probability <= FRESHNESS_MODEL_SOUND
+        and not total_loss
+        and NEARLY_MIN <= score < FRESH_MIN
+    ):
+        score = FRESH_MIN
+        model_note = (
+            "A model trained on fresh and rotten produce sees no sign of spoilage, "
+            "so uneven lighting and shine are not counted against it."
+        )
+
     capped = False
     if is_high_risk(category, record) and score > HIGH_RISK_SCORE_CAP:
         score = HIGH_RISK_SCORE_CAP
@@ -297,12 +339,17 @@ def assess(
             "past the point where the item can be salvaged. Do not eat it; "
             "mould can reach further than it shows.",
         )
+    if model_note is not None:
+        reasoning.insert(0, model_note)
 
     return FreshnessAssessment(
         score=score,
         status=status,
         contributions=contributions,
         reasoning=reasoning,
+        scoring_method=(
+            "opencv-heuristic-v1+freshness-model-v1" if model_used else "opencv-heuristic-v1"
+        ),
         capped=capped,
     )
 
