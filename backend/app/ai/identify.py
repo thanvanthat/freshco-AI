@@ -32,6 +32,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
+import cv2
+import numpy as np
+
 from ..config import get_settings
 from ..schemas import FOOD_CATEGORIES
 from .provider import AIProviderError, _extract_json_object, get_provider
@@ -80,6 +83,27 @@ _PROMPT = (
 )
 
 
+#: Longest edge of the copy sent to the vision model. Naming a food needs far
+#: less than the upload: the model answered "Tomato" from a 384 px copy as
+#: readily as from 960 px, and a smaller image is a smaller, cheaper request.
+VISION_MAX_EDGE = 512
+
+
+def _shrink(image: bytes, mime_type: str) -> tuple[bytes, str]:
+    """A JPEG no larger than VISION_MAX_EDGE, or the original if undecodable."""
+    frame = cv2.imdecode(np.frombuffer(image, np.uint8), cv2.IMREAD_COLOR)
+    if frame is None:
+        return image, mime_type
+    height, width = frame.shape[:2]
+    scale = VISION_MAX_EDGE / max(height, width)
+    if scale < 1.0:
+        frame = cv2.resize(
+            frame, (round(width * scale), round(height * scale)), interpolation=cv2.INTER_AREA
+        )
+    ok, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    return (encoded.tobytes(), "image/jpeg") if ok else (image, mime_type)
+
+
 class VisionIdentification:
     """What the vision model saw. Name only -- no score, no advice."""
 
@@ -110,9 +134,10 @@ async def identify_food(image: bytes, *, mime_type: str = "image/jpeg"):
     try:
         # The cap covers the provider's own 503 retries too: a scan gives up on
         # the vision model rather than leave someone watching a spinner.
+        small, mime_type = _shrink(image, mime_type)
         raw = await asyncio.wait_for(
             provider.complete_vision(
-                _SYSTEM, _PROMPT, image, mime_type=mime_type, max_tokens=200
+                _SYSTEM, _PROMPT, small, mime_type=mime_type, max_tokens=200
             ),
             timeout=TIMEOUT_SECONDS,
         )

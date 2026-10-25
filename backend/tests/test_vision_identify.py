@@ -145,3 +145,19 @@ async def test_a_slow_model_is_abandoned_not_waited_on(provider, monkeypatch):
     monkeypatch.setattr(identify, "get_provider", lambda _s, **_kw: slow)
     monkeypatch.setattr(identify, "TIMEOUT_SECONDS", 0.05)
     assert await identify.identify_food(b"x") is None
+
+
+@pytest.mark.asyncio
+async def test_the_photo_is_shrunk_before_it_is_sent(provider):
+    """A small copy is enough to name a food, and a smaller request is faster."""
+    import cv2
+    import numpy as np
+
+    fake = provider(
+        '{"is_food": true, "food_name": "Tomato", "category": "vegetable",'
+        ' "confidence": 0.9, "multiple": false}'
+    )
+    big = cv2.imencode(".jpg", np.full((1600, 1200, 3), 120, np.uint8))[1].tobytes()
+    await identify.identify_food(big)
+    sent = cv2.imdecode(np.frombuffer(fake.calls[0], np.uint8), cv2.IMREAD_COLOR)
+    assert max(sent.shape[:2]) == identify.VISION_MAX_EDGE
