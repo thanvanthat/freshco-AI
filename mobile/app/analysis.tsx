@@ -36,7 +36,7 @@ import { colors, spacing } from '../src/theme';
  * and nothing is filled in when the backend returned null.
  */
 export default function AnalysisScreen() {
-  const { t } = useTranslation();
+  const { t, tPlural } = useTranslation();
   const router = useRouter();
   const toast = useToast();
   const capabilities = useCapabilities();
@@ -230,9 +230,9 @@ export default function AnalysisScreen() {
   const windowHeadline =
     result.estimated_window.max_days === 0
       ? t('status.spoiled')
-      : `~${result.estimated_window.max_days} ${
-          result.estimated_window.max_days === 1 ? t('common.day') : t('common.days', { count: result.estimated_window.max_days })
-        }`.replace(/~1 1 /, '~1 ');
+      : // The translated phrase already carries the number; prefixing it too
+        // read "~29 29 days".
+        tPlural('common.aboutDay', 'common.aboutDays', result.estimated_window.max_days);
 
   return (
     <Screen showBack title={t('analysis.title')} tabBarPadding={false}>

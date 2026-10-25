@@ -540,3 +540,34 @@ def test_assistant_declines_an_off_topic_question(client: TestClient) -> None:
 def test_assistant_rejects_an_empty_message(client: TestClient) -> None:
     response = client.post(f"{PREFIX}/assistant/chat", json={"message": ""})
     assert response.status_code == 422
+
+
+def test_a_red_apple_from_the_detector_is_not_trusted(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """COCO has no tomato class: tomatoes on the vine came back "Apple, 80 fresh".
+
+    For a red item the detector's "Apple" is dropped, so the vision model is
+    asked rather than the guess adopted.
+    """
+    from app.routers import analyze as analyze_module
+    from app.vision.detector import Detection
+
+    class FakeDetector:
+        def detect(self, frame, **_):
+            return [Detection("Apple", "apple", 0.8, (0.2, 0.2, 0.8, 0.8))]
+
+    vision_calls: list[bytes] = []
+
+    async def fake_vision(data, **_):
+        vision_calls.append(data)
+        return None
+
+    monkeypatch.setattr(analyze_module, "get_detector", lambda: FakeDetector())
+    monkeypatch.setattr(analyze_module, "identify_with_vision", fake_vision)
+
+    body = client.post(f"{PREFIX}/analyze", files=_upload(_jpeg())).json()  # red disc
+
+    assert body["food_name"] != "Apple"
+    assert body["identified"] is False
+    assert len(vision_calls) == 1, "the vision model was not asked"

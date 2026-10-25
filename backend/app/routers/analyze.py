@@ -33,7 +33,7 @@ from ..schemas import (
     VisualMetrics,
     VisualNarrative,
 )
-from ..vision.classifier import ModelUnavailableError, get_classifier
+from ..vision.classifier import ModelUnavailableError, get_classifier, looks_red
 from ..vision.detector import get_detector
 from ..vision.metrics import ImageDecodeError, decode_image, measure_surface
 
@@ -233,6 +233,16 @@ async def analyze(
                     logger.exception("Detector fallback failed")
 
             unique_foods = list(dict.fromkeys(detected_foods))
+
+            # COCO has no tomato class, so for red round produce its "apple" is
+            # a coin toss between apple and tomato: tomatoes on the vine came
+            # back "Apple, 80 fresh". Apples really are red, so the colour check
+            # that settles a red "orange" cannot settle this. Drop the guess, so
+            # the vision model is asked and the classifier's red shortlist --
+            # Tomato, then Apple -- stands if it cannot answer.
+            if unique_foods == ["Apple"] and looks_red(frame):
+                detected_foods = []
+                unique_foods = []
 
             # Exactly one kind of food in frame: the classifier missed it but
             # the detector located it, which is a real identification and not a
