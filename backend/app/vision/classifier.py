@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
@@ -72,6 +72,9 @@ IMAGENET_FOOD_MAP: dict[str, str] = {
 #: Below this, the top ImageNet food label is a guess, not an identification.
 #: A tomato scores ~0.2 as "strawberry"; real bananas and oranges score > 0.6.
 MIN_IDENTIFY_CONFIDENCE = 0.30
+
+#: Apple-vs-pomegranate head probability needed to assert either name.
+POMEGRANATE_SURE = 0.8
 
 #: Median OpenCV hue (0-179) below which the food is red rather than orange.
 #: Tomatoes measure ~4, oranges ~12-18. ImageNet has no tomato class and files
@@ -309,7 +312,48 @@ class FoodClassifier:
 
         if self._mode == "custom":
             return self._interpret_custom(raw, top_k)
-        return self._interpret_imagenet(raw, top_k, _median_hue(image_bgr))
+        result = self._interpret_imagenet(raw, top_k, _median_hue(image_bgr))
+        return self._settle_apple_or_pomegranate(result, image_bgr)
+
+    def _settle_apple_or_pomegranate(
+        self, result: Identification, image_bgr: np.ndarray
+    ) -> Identification:
+        """Let the apple-vs-pomegranate head overrule ImageNet's "pomegranate".
+
+        ImageNet has no red-apple class, so it called 37 of 60 independently
+        photographed apples "Pomegranate" at a median confidence of 0.87. The
+        head was right on 91% of 500 apples and 14 of 15 pomegranates from
+        sources it never trained on. When it is unsure, neither name is
+        asserted: the item goes unidentified with both offered.
+        """
+        if not result.identified or result.food_name != "Pomegranate" or self._onnx is None:
+            return result
+        p_pomegranate = self._onnx.pomegranate_probability(image_bgr)
+        if p_pomegranate is None or p_pomegranate >= POMEGRANATE_SURE:
+            return result
+
+        both = [
+            Prediction("Apple", 1.0 - p_pomegranate, "apple-vs-pomegranate"),
+            Prediction("Pomegranate", p_pomegranate, "apple-vs-pomegranate"),
+        ]
+        others = [p for p in result.predictions if p.food_name not in {"Apple", "Pomegranate"}]
+        if p_pomegranate <= 1.0 - POMEGRANATE_SURE:
+            return replace(
+                result,
+                food_name="Apple",
+                confidence=1.0 - p_pomegranate,
+                predictions=[both[0], *others],
+                note="ImageNet read this as a pomegranate; a model trained to tell "
+                "the two apart says apple.",
+            )
+        return replace(
+            result,
+            identified=False,
+            food_name=None,
+            confidence=0.0,
+            predictions=[*both, *others],
+            note="This could be an apple or a pomegranate. Pick which.",
+        )
 
     def _interpret_custom(self, raw: np.ndarray, top_k: int) -> Identification:
         labels = self._labels or []

@@ -31,11 +31,21 @@ def main() -> None:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--step", type=int, default=100)
     parser.add_argument("--take", type=int, default=15)
+    parser.add_argument(
+        "--offsets",
+        help="comma-separated row offsets to read instead of every --step; "
+        "used to draw training rows that do not overlap the test sample",
+    )
     args = parser.parse_args()
+    offsets = (
+        [int(o) for o in args.offsets.split(",")]
+        if args.offsets
+        else list(range(0, 3200, args.step))
+    )
 
     counts: collections.Counter[str] = collections.Counter()
     with httpx.Client(timeout=120, follow_redirects=True) as client:
-        for offset in range(0, 3200, args.step):
+        for offset in offsets:
             response = client.get(
                 ROWS,
                 params={

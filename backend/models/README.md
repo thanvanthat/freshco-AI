@@ -10,6 +10,7 @@ what keeps the whole backend inside the 250 MB limit for a serverless function.
 | `imagenet_class_index.json` | Class id → label table | 35 KB | With the above |
 | `yolox_tiny.onnx` | Object detection + location | 20.2 MB | `/detect`, and `/analyze` when classification fails |
 | `freshness_head.npz` | Fresh-vs-rotten head on the embedding | ~10 KB | Scoring fruit and vegetables in `/analyze` and `/detect` |
+| `apple_pomegranate_head.npz` | Apple-vs-pomegranate head on the embedding | ~10 KB | When ImageNet answers "pomegranate" |
 | `head.npz` + `labels.txt` | Custom multi-class head | — | Only if you train one (not committed) |
 
 ---
@@ -80,6 +81,30 @@ fruit shown as **fresh** from 29.5% to 5.2%, with sound fruit shown as
 **spoiled** unchanged at 0.5%. Visible mould still reads spoiled through the
 formula's own total-loss rule.
 
+### 2b. `apple_pomegranate_head.npz` — shipped
+
+**Why it exists.** ImageNet-1k's only apple is the green Granny Smith, so
+MobileNetV2 files red apples under "pomegranate": 37 of 60 independently
+photographed apples, at a median confidence of 0.87. It is consulted only when
+ImageNet says "pomegranate", and decides between the two.
+
+**Trained on** 320 Project-AgML apple and pomegranate photos, from rows that do
+not overlap the evaluation sample (`scripts/train_apple_pomegranate_head.py`
+has the exact command).
+
+**Measured, end to end through the classifier:**
+
+| Photos | Before | With the head |
+|---|---|---|
+| 60 held-out AgML apples | Apple 2, **Pomegranate 37** | **Apple 38, Pomegranate 0** |
+| 60 held-out AgML pomegranates | Pomegranate 58 | Pomegranate 57 |
+| 15 Wikimedia pomegranates (other source) | Pomegranate 13 | Pomegranate 8, "apple or pomegranate?" 6, **Apple 1** |
+
+Below 0.8 confidence either way it names neither and offers both, which is why
+more of the outside-source pomegranates now ask. Unlike fresh-vs-rotten, this
+distinction held across sources: 92% of 500 apples from Densu341 were called
+apple by the head alone.
+
 **Not shipped: a food-name head.** The same data trains one that is 97% right
 on the foods it knows — and, at ≥0.95 confidence, misnames 25% of foods it has
 never seen (strawberry → bitter gourd, pomegranate → apple). A closed set of
@@ -91,7 +116,7 @@ precision on photos from its own source, then called mouldy bread raw meat at
 p=1.000. Removed on 30 September 2026; it is why the freshness head is judged
 on a second, independent dataset.
 
-### 2b. `head.npz` — yours to train
+### 2c. `head.npz` — yours to train
 
 Train one to add classes the stock model cannot name:
 
@@ -190,6 +215,7 @@ swapped out because YOLOX is 9 MB smaller and found 12 items where SSD found
 | `imagenet_class_index.json` | TensorFlow/Keras | Apache-2.0 |
 | `mobilenetv2-12.onnx` `embedding` output | Added here, same weights | Apache-2.0 |
 | `freshness_head.npz` | Trained here on Densu341/Fresh-rotten-fruit | See below |
+| `apple_pomegranate_head.npz` | Trained here on Project-AgML | CC-BY-4.0 data; see below |
 
 The freshness head was trained on a sample of a dataset published under the
 OpenRAIL licence, and evaluated (not trained) on Project-AgML's CC-BY-4.0

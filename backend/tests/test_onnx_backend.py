@@ -192,3 +192,42 @@ def test_softmax_normalises_each_row_of_a_batch() -> None:
     probabilities = softmax(np.array([[2.0, 0.0], [0.0, 2.0], [1.0, 1.0]]))
     assert np.allclose(probabilities.sum(axis=1), 1.0)
     assert probabilities[0, 0] > 0.8 and probabilities[1, 1] > 0.8
+
+
+class TestAppleOrPomegranate:
+    """ImageNet has no red-apple class and calls red apples "pomegranate"."""
+
+    @staticmethod
+    def _settle(p_pomegranate: float):
+        from app.vision.classifier import FoodClassifier, Identification, Prediction
+
+        class _Onnx:
+            def pomegranate_probability(self, _image):
+                return p_pomegranate
+
+        classifier = FoodClassifier()
+        classifier._onnx = _Onnx()
+        imagenet_said = Identification(
+            identified=True,
+            food_name="Pomegranate",
+            confidence=0.87,
+            predictions=[
+                Prediction("Pomegranate", 0.87, "pomegranate"),
+                Prediction("Orange", 0.05, "orange"),
+            ],
+        )
+        return classifier._settle_apple_or_pomegranate(imagenet_said, np.zeros((8, 8, 3), np.uint8))
+
+    def test_a_confident_apple_overrules_imagenet(self) -> None:
+        result = self._settle(0.03)
+        assert result.identified and result.food_name == "Apple"
+        assert result.confidence == pytest.approx(0.97)
+
+    def test_a_confident_pomegranate_stands(self) -> None:
+        result = self._settle(0.95)
+        assert result.identified and result.food_name == "Pomegranate"
+
+    def test_unsure_names_neither_and_offers_both(self) -> None:
+        result = self._settle(0.5)
+        assert result.identified is False and result.food_name is None
+        assert [p.food_name for p in result.predictions[:2]] == ["Apple", "Pomegranate"]

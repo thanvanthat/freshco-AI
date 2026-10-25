@@ -54,6 +54,9 @@ HEAD_FILE = "head.npz"
 #: Fresh-vs-rotten head over the 1280-d embedding. See
 #: ``scripts/train_freshness_head.py`` for how it was trained and measured.
 FRESHNESS_HEAD_FILE = "freshness_head.npz"
+#: Apple-vs-pomegranate head, consulted only when ImageNet answers
+#: "pomegranate". See ``scripts/train_apple_pomegranate_head.py``.
+APPLE_POMEGRANATE_HEAD_FILE = "apple_pomegranate_head.npz"
 LABELS_FILE = "labels.txt"
 
 
@@ -161,6 +164,7 @@ class OnnxFoodModel:
         self.head: TrainedHead | None = None
         #: (weights (1280, 2), bias (2,)), or None when no head ships.
         self.freshness_head: tuple[np.ndarray, np.ndarray] | None = None
+        self.apple_pomegranate_head: tuple[np.ndarray, np.ndarray] | None = None
         self.class_index: dict[int, str] = {}
 
     def load(self) -> None:
@@ -189,11 +193,25 @@ class OnnxFoodModel:
         self.class_index = load_class_index(self._models_dir)
         self.head = load_head(self._models_dir)
 
-        freshness = self._models_dir / FRESHNESS_HEAD_FILE
-        if freshness.exists():
-            with np.load(freshness) as data:
-                self.freshness_head = (data["weights"], data["bias"])
-            logger.info("Loaded freshness head")
+        self.freshness_head = self._load_binary_head(FRESHNESS_HEAD_FILE)
+        self.apple_pomegranate_head = self._load_binary_head(APPLE_POMEGRANATE_HEAD_FILE)
+
+    def _load_binary_head(self, filename: str) -> tuple[np.ndarray, np.ndarray] | None:
+        """A two-class head over the embedding, or None when this build has none."""
+        path = self._models_dir / filename
+        if not path.exists():
+            return None
+        with np.load(path) as data:
+            logger.info("Loaded %s", filename)
+            return data["weights"], data["bias"]
+
+    def _positive_probability(
+        self, head: tuple[np.ndarray, np.ndarray] | None, image_bgr: np.ndarray
+    ) -> float | None:
+        if head is None:
+            return None
+        weights, bias = head
+        return float(softmax(self.embedding(image_bgr) @ weights + bias)[1])
 
     @property
     def mode(self) -> str:
@@ -218,10 +236,16 @@ class OnnxFoodModel:
         Trained on nine kinds of produce; only meaningful for fruit and
         vegetables, which is where ``app/freshness.py`` applies it.
         """
-        if self.freshness_head is None:
-            return None
-        weights, bias = self.freshness_head
-        return float(softmax(self.embedding(image_bgr) @ weights + bias)[1])
+        return self._positive_probability(self.freshness_head, image_bgr)
+
+    def pomegranate_probability(self, image_bgr: np.ndarray) -> float | None:
+        """Probability this is a pomegranate rather than an apple, or None.
+
+        ImageNet's only apple is the green Granny Smith, so it files red apples
+        under "pomegranate" -- 37 of 60 independently photographed apples, at a
+        median 0.87. This head separates the two.
+        """
+        return self._positive_probability(self.apple_pomegranate_head, image_bgr)
 
     def embedding(self, image_bgr: np.ndarray) -> np.ndarray:
         """The 1280-d pooled image embedding, one layer before the logits.
