@@ -1,0 +1,87 @@
+{
+  // Terminal > Run Task... (or Ctrl+Shift+P, "Tasks: Run Task").
+  // Assumes the backend's virtual environment exists at backend/.venv and the
+  // app's packages are installed (cd mobile && npm install).
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: run API (local)",
+      "detail": "FastAPI on http://localhost:8000, reloads on save. Docs at /docs.",
+      "type": "shell",
+      "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+      "args": ["-m", "uvicorn", "app.main:app", "--reload", "--port", "8000"],
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^__never__$" },
+        "background": {
+          "activesBeginsPattern": "Will watch for changes",
+          "beginsPattern": "Will watch for changes",
+          "endsPattern": "Application startup complete"
+        }
+      },
+      "presentation": { "panel": "dedicated", "group": "servers" }
+    },
+    {
+      "label": "App: web (live API)",
+      "detail": "Expo web on http://localhost:8081, talking to https://freshco-api.vercel.app.",
+      "type": "shell",
+      "command": "npx",
+      "args": ["expo", "start", "--web"],
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "servers" }
+    },
+    {
+      "label": "App: web (local API)",
+      "detail": "Expo web against the backend on this machine. Starts it too.",
+      "type": "shell",
+      "command": "npx",
+      "args": ["expo", "start", "--web"],
+      "options": {
+        "cwd": "${workspaceFolder}/mobile",
+        // Overrides mobile/.env for this run only: Expo does not replace a
+        // variable that is already set in the environment.
+        "env": { "EXPO_PUBLIC_API_BASE_URL": "http://localhost:8000" }
+      },
+      "dependsOn": "Backend: run API (local)",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "servers" }
+    },
+    {
+      "label": "Backend: tests",
+      "type": "shell",
+      "command": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+      "args": ["-m", "pytest", "-q"],
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "App: tests",
+      "type": "shell",
+      "command": "npx",
+      "args": ["jest"],
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "App: typecheck",
+      "type": "shell",
+      "command": "npx",
+      "args": ["tsc", "--noEmit"],
+      "options": { "cwd": "${workspaceFolder}/mobile" },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "All tests",
+      "dependsOn": ["Backend: tests", "App: tests", "App: typecheck"],
+      "dependsOrder": "sequence",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}
